@@ -153,7 +153,7 @@ namespace XDM.Tests
 
         private void Test()
         {
-            var reader = new JsonTextReader(new StreamReader(@"C:\Users\subhro\Desktop\message.json"));
+            var reader = new JsonTextReader(new StringReader("{\"messageType\":\"test\"}"));
             if (reader.Read() && reader.TokenType == JsonToken.StartObject)
             {
                 while (reader.Read())

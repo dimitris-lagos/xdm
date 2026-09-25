@@ -71,7 +71,7 @@ namespace XDM.SystemTests
         //            string configDir = Path.GetTempPath();
         //            string id = Guid.NewGuid().ToString();
 
-        //            string tempDir = @"C:\Users\subhro\Documents\IISExpress\DemoTS";//Path.Combine(Path.GetTempPath(), id);
+        //            string tempDir = Path.Combine(Path.GetTempPath(), "XDM", id, "DemoTS");
         //            Directory.CreateDirectory(tempDir);
 
         //            Console.WriteLine(tempDir);
@@ -539,7 +539,7 @@ namespace XDM.SystemTests
         //            string configDir = Path.GetTempPath();
         //            string id = Guid.NewGuid().ToString();
 
-        //            string tempDir = @"C:\Users\subhro\Documents\IISExpress\DemoTS";//Path.Combine(Path.GetTempPath(), id);
+        //            string tempDir = Path.Combine(Path.GetTempPath(), "XDM", id, "DemoTS");
         //            Directory.CreateDirectory(tempDir);
 
         //            Console.WriteLine(tempDir);
