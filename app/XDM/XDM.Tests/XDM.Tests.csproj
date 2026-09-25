@@ -11,6 +11,14 @@
     <PackageReference Include="NUnit" Version="3.13.1" />
     <PackageReference Include="NUnit3TestAdapter" Version="3.17.0" />
     <PackageReference Include="coverlet.collector" Version="3.0.2" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\XDM.Core\BrowserMonitoring\DownloadControllerProtocol.cs" Link="DownloadControllerProtocol.cs" />
+    <Compile Include="..\XDM.Core\HttpServer\HttpParser.cs" Link="HttpParser.cs" />
+    <Compile Include="..\XDM.Core\HttpServer\RequestContext.cs" Link="RequestContext.cs" />
+    <Compile Include="..\XDM.Core\HttpServer\ResponseStatus.cs" Link="ResponseStatus.cs" />
   </ItemGroup>
 
 </Project>

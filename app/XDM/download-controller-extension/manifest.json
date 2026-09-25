@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "XDM Download Controller",
+  "description": "View and control Xtreme Download Manager downloads.",
+  "version": "1.2.0",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyghJuv05utidh6F6DzkqPJ9iE0mW6OlZBP0t/iVoNl2xNkhr8yatbVCkk9QeXPVcNwKH4qVUq6Bb+6lkbw3+Jh49YIhkikzL5xfpCZDS/iRrhp3DUWzA8NU7/ejHbB+7YwfT47opBzi8oceVshbeXCr8Ntln8p3BVZscb312jtF5MValgkT5iZ0nH664uhgaPt4XLEp/S7QB7dIxWUifo/mFQ22WPpUtlTsQjm5QSxRfVJPdFo9Q76PRqNw4t0RUCzuUhgbXbLEV4fTxDMvV7dGoEZM0b8nbHPSTL70dz3P1PDJseMLq3dvI5+BWELhKRZLrieju8oq+NzJXEx9AhwIDAQAB",
+  "permissions": [
+    "alarms",
+    "storage"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:8597/*"
+  ],
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "XDM Download Controller",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  }
+}

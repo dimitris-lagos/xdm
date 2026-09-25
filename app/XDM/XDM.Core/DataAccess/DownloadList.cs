@@ -92,7 +92,7 @@ namespace XDM.Core.DataAccess
                         if (inProgress)
                         {
                             var inp = (InProgressDownloadItem)entry;
-                            inp.Status = DownloadStatus.Stopped;
+                            inp.Status = (DownloadStatus)r.GetInt32(5);
                             inp.Progress = r.GetInt32(6);
                             inProgressDownloads.Add(inp);
                         }
@@ -162,7 +162,7 @@ namespace XDM.Core.DataAccess
                         if (inProgress)
                         {
                             var inp = (InProgressDownloadItem)entry;
-                            inp.Status = DownloadStatus.Stopped;
+                            inp.Status = (DownloadStatus)r.GetInt32(5);
                             inp.Progress = r.GetInt32(6);
                         }
                         return entry;

@@ -16,7 +16,9 @@
     <StartupObject>XDM.Wpf.UI.App</StartupObject>
     <Description>Xtreme Download Manager</Description>
     <AssemblyTitle>Xtreme Download Manager</AssemblyTitle>
-    <AssemblyVersion>8.0.1</AssemblyVersion>
+    <Version>9.0.0</Version>
+    <AssemblyVersion>9.0.0.0</AssemblyVersion>
+    <FileVersion>9.0.0.0</FileVersion>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <DefineConstants>TRACE;WINDOWS</DefineConstants>
   </PropertyGroup>
@@ -37,6 +39,10 @@
 
   <ItemGroup>
     <Content Include="..\chrome-extension\**" CopyToOutputDirectory="Always" LinkBase="chrome-extension\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="..\download-controller-extension\**" CopyToOutputDirectory="Always" LinkBase="download-controller-extension\" />
   </ItemGroup>
 
   <ItemGroup>

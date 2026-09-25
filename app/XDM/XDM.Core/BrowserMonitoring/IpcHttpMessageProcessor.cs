@@ -16,6 +16,7 @@ namespace XDM.Core.BrowserMonitoring
     public class IpcHttpMessageProcessor
     {
         private NanoServer server;
+        private readonly DownloadControllerApi downloadController = new();
         private static string[] blockedHeaders = { "accept", "if", "authorization", "proxy", "connection", "expect", "TE",
             "upgrade", "range", "cookie", "transfer-encoding", "content-type", "content-length","content-encoding" };
 
@@ -48,6 +49,7 @@ namespace XDM.Core.BrowserMonitoring
         {
             try
             {
+                if (downloadController.TryHandle(context)) return;
                 switch (context.RequestPath)
                 {
                     case "/sync":
@@ -81,6 +83,11 @@ namespace XDM.Core.BrowserMonitoring
             catch (Exception ex)
             {
                 Log.Debug(ex.ToString());
+                if (context.RequestPath.StartsWith("/controller/v1/", StringComparison.Ordinal))
+                {
+                    DownloadControllerApi.SendInternalError(context);
+                    return;
+                }
                 throw;
             }
         }

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
-using TraceLog;
 #if !NET5_0_OR_GREATER
 using XDM.Compatibility;
 #endif
@@ -11,21 +10,25 @@ namespace XDM.Core.HttpServer
 {
     internal static class HttpParser
     {
+        internal const long MaxRequestBodyLength = 1024 * 1024;
+
         public static string ParseRequestStatusLine(string statusLine)
         {
-            try
+            ParseRequestLine(statusLine, out _, out var path);
+            return path;
+        }
+
+        internal static void ParseRequestLine(string requestLine, out string method, out string path)
+        {
+            var parts = requestLine.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length != 3 || !parts[2].StartsWith("HTTP/", StringComparison.OrdinalIgnoreCase)
+                || parts[0].Length == 0 || parts[0].IndexOfAny(new[] { '\r', '\n', '\t' }) >= 0
+                || !parts[1].StartsWith("/", StringComparison.Ordinal))
             {
-                var arr = statusLine.Split(' ');
-                if (arr.Length > 2)
-                {
-                    return arr[1];
-                }
+                throw new HttpRequestException(400, "Bad Request", "Invalid HTTP request line");
             }
-            catch (Exception ex)
-            {
-                Log.Debug(ex, ex.Message);
-            }
-            throw new IOException($"Invalid HTTP status line: {statusLine}");
+            method = parts[0].ToUpperInvariant();
+            path = parts[1];
         }
 
         internal static void ParseHeader(string headerLine, out string key, out string value)
@@ -37,13 +40,22 @@ namespace XDM.Core.HttpServer
                 value = headerLine.Substring(index + 1).Trim();
                 return;
             }
-            throw new IOException("Invalid header");
+            throw new HttpRequestException(400, "Bad Request", "Invalid HTTP header");
         }
 
         internal static long ParseContentLength(Dictionary<string, List<string>> headers)
         {
-            var value = headers.GetValueOrDefault("Content-Length")?[0];
-            return Int64.Parse(value ?? "-1");
+            var values = headers.GetValueOrDefault("Content-Length");
+            if (values == null) return -1;
+            if (values.Count != 1 || !Int64.TryParse(values[0], out var length) || length < 0)
+            {
+                throw new HttpRequestException(400, "Bad Request", "Invalid Content-Length");
+            }
+            if (length > MaxRequestBodyLength)
+            {
+                throw new HttpRequestException(413, "Payload Too Large", "Request body is too large");
+            }
+            return length;
         }
 
         private static bool ShouldKeepAlive(Dictionary<string, List<string>> headers)
@@ -58,8 +70,9 @@ namespace XDM.Core.HttpServer
 
         internal static RequestContext ParseContext(TcpClient tcp)
         {
+            string method = "GET";
             string path = "/";
-            Dictionary<string, List<string>> headers = new();
+            Dictionary<string, List<string>> headers = new(StringComparer.OrdinalIgnoreCase);
             byte[]? body = null;
             var io = tcp.GetStream();
             var first = true;
@@ -68,7 +81,7 @@ namespace XDM.Core.HttpServer
             {
                 if (first)
                 {
-                    path = ParseRequestStatusLine(line);
+                    ParseRequestLine(line, out method, out path);
                     first = false;
                     continue;
                 }
@@ -83,9 +96,13 @@ namespace XDM.Core.HttpServer
                 body = new byte[contentLength];
                 using var ms = new MemoryStream(body);
                 io.CopyTo(ms, contentLength);
+                if (ms.Length != contentLength)
+                {
+                    throw new HttpRequestException(400, "Bad Request", "Incomplete request body");
+                }
                 ms.Close();
             }
-            return new RequestContext(path, headers, body, tcp, ShouldKeepAlive(headers));
+            return new RequestContext(method, path, headers, body, tcp, ShouldKeepAlive(headers));
         }
 
         internal static void CopyTo(this Stream stream, Stream destination, long limit = Int64.MaxValue)
@@ -98,5 +115,17 @@ namespace XDM.Core.HttpServer
                 limit -= read;
             }
         }
+    }
+
+    internal sealed class HttpRequestException : IOException
+    {
+        internal HttpRequestException(int statusCode, string statusMessage, string message) : base(message)
+        {
+            StatusCode = statusCode;
+            StatusMessage = statusMessage;
+        }
+
+        internal int StatusCode { get; }
+        internal string StatusMessage { get; }
     }
 }

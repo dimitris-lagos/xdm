@@ -11,6 +11,7 @@ namespace XDM.Core.HttpServer
     public class RequestContext
     {
         private TcpClient tcp;
+        public string RequestMethod { get; }
         public string RequestPath { get; }
         public byte[]? RequestBody { get; }
         public Dictionary<string, List<string>> RequestHeaders { get; }
@@ -19,8 +20,9 @@ namespace XDM.Core.HttpServer
         public ResponseStatus ResponseStatus { set; get; }
         public bool KeepAlive { get; private set; }
 
-        internal RequestContext(string path, Dictionary<string, List<string>> headers, byte[]? body, TcpClient tcp, bool keepAlive)
+        internal RequestContext(string method, string path, Dictionary<string, List<string>> headers, byte[]? body, TcpClient tcp, bool keepAlive)
         {
+            this.RequestMethod = method;
             this.RequestPath = path;
             this.RequestHeaders = headers;
             this.RequestBody = body;
@@ -46,7 +48,7 @@ namespace XDM.Core.HttpServer
                     responseBuffer.Append($"{headerName}: {value}\r\n");
                 }
             }
-            responseBuffer.Append($"Connection: keep-alive\r\n");
+            responseBuffer.Append($"Connection: {(KeepAlive ? "keep-alive" : "close")}\r\n");
             if (ResponseBody != null && ResponseBody.Length > 0)
             {
                 responseBuffer.Append($"Content-Length: {ResponseBody.Length}\r\n");

@@ -1,3 +1,22 @@
+## XDM 9 Beta
+
+This fork contains the **Xtreme Download Manager 9.0.0 Beta** Windows build.
+
+New in this beta:
+
+- A separate Opera/Chromium **XDM Download Controller** extension with a compact responsive popup.
+- Live download progress, size, speed, ETA, and state-aware Pause, Stop, Resume, and Restart controls.
+- A persistent **Session / All** setting; Session shows only downloads added since Opera started.
+- Background polling with active-count, finished, and offline toolbar badge states.
+- A distinct indigo-purple controller icon, while the original XDM Integration Module remains unchanged.
+- A restricted loopback controller API with a fixed extension identity, process-scoped session token, narrow CORS rules, strict request validation, and no exposed URLs, paths, cookies, credentials, or proxy data.
+- Download snapshots use persisted data plus thread-safe runtime metrics and do not synchronously read or wait on the UI thread.
+- Application and About metadata updated to version 9.0.0 Beta.
+
+The unpacked controller extension is in `app/XDM/download-controller-extension`. A ready-to-extract Opera/Chromium package is available at `app/XDM/xdm-download-controller-opera-v1.2.0.zip`.
+
+---
+
 **As of 2026 this project is in active development**
 
 <p id="downloads" align="center">

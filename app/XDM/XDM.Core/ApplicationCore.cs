@@ -29,7 +29,7 @@ namespace XDM.Core
 {
     public class ApplicationCore : IApplicationCore
     {
-        public Version AppVerion => new(8, 0, 0);
+        public Version AppVerion => new(9, 0, 0);
         public string AppPlatform => PlatformHelper.GetAppPlatform();
 
         private Dictionary<string, KeyValuePair<IBaseDownloader, bool>> liveDownloads = new();

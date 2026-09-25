@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>XDM Download Controller</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <img class="brand-mark" src="icon48.png" alt="" aria-hidden="true">
+    <div>
+      <h1>XDM</h1>
+      <p id="connection-status">Connecting…</p>
+    </div>
+    <button id="settings" class="icon-button" type="button" title="Settings" aria-label="Settings">⚙</button>
+    <button id="refresh" class="icon-button" type="button" title="Refresh" aria-label="Refresh">↻</button>
+  </header>
+  <section id="settings-panel" class="settings-panel" hidden>
+    <div>
+      <strong>Download history</strong>
+      <small id="scope-description">This Opera session</small>
+    </div>
+    <label class="scope-switch">
+      <input id="show-all" type="checkbox" aria-label="Show all downloads">
+      <span class="scope-track"><span class="scope-thumb"></span></span>
+      <span id="scope-label" class="scope-label">Session</span>
+    </label>
+  </section>
+  <main>
+    <div id="empty" class="empty" hidden>No downloads yet.</div>
+    <div id="downloads" class="downloads" aria-live="polite"></div>
+  </main>
+  <template id="download-template">
+    <article class="download-card">
+      <div class="download-heading">
+        <div class="name"></div>
+        <span class="state"></span>
+      </div>
+      <div class="progress-track"><div class="progress-bar"></div></div>
+      <div class="meta">
+        <span class="size"></span>
+        <span class="speed"></span>
+        <span class="eta"></span>
+      </div>
+      <div class="actions"></div>
+    </article>
+  </template>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Text;
 using TraceLog;
 
 namespace XDM.Core.HttpServer
@@ -53,6 +54,11 @@ namespace XDM.Core.HttpServer
                         }
                     }
                 }
+                catch (HttpRequestException ex)
+                {
+                    SendError(tcp, ex.StatusCode, ex.StatusMessage, ex.Message);
+                    Log.Debug(ex, ex.Message);
+                }
                 catch (Exception ex)
                 {
                     Log.Debug(ex, ex.Message);
@@ -62,6 +68,20 @@ namespace XDM.Core.HttpServer
                     try { tcp.Close(); } catch { }
                 }
             }).Start();
+        }
+
+        private static void SendError(TcpClient tcp, int statusCode, string statusMessage, string message)
+        {
+            try
+            {
+                var body = Encoding.UTF8.GetBytes("{\"error\":\"" + message.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"}");
+                var header = Encoding.ASCII.GetBytes($"HTTP/1.0 {statusCode} {statusMessage}\r\nContent-Type: application/json\r\nContent-Length: {body.Length}\r\nConnection: close\r\n\r\n");
+                var stream = tcp.GetStream();
+                stream.Write(header, 0, header.Length);
+                stream.Write(body, 0, body.Length);
+                stream.Flush();
+            }
+            catch { }
         }
     }
 }

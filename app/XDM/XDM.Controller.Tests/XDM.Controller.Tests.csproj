@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <Nullable>enable</Nullable>
+    <LangVersion>9.0</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.9.4" />
+    <PackageReference Include="NUnit" Version="3.13.1" />
+    <PackageReference Include="NUnit3TestAdapter" Version="3.17.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\XDM.Tests\DownloadControllerProtocolTests.cs" Link="DownloadControllerProtocolTests.cs" />
+    <Compile Include="..\XDM.Core\BrowserMonitoring\DownloadControllerProtocol.cs" Link="DownloadControllerProtocol.cs" />
+    <Compile Include="..\XDM.Core\HttpServer\HttpParser.cs" Link="HttpParser.cs" />
+    <Compile Include="..\XDM.Core\HttpServer\LineReader.cs" Link="LineReader.cs" />
+    <Compile Include="..\XDM.Core\HttpServer\RequestContext.cs" Link="RequestContext.cs" />
+    <Compile Include="..\XDM.Core\HttpServer\ResponseStatus.cs" Link="ResponseStatus.cs" />
+  </ItemGroup>
+</Project>

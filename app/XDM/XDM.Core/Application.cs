@@ -8,6 +8,7 @@ using XDM.Core.DataAccess;
 using XDM.Core.Downloader;
 using XDM.Core.Util;
 using XDM.Core.Updater;
+using XDM.Core.BrowserMonitoring;
 using YDLWrapper;
 
 namespace XDM.Core
@@ -105,6 +106,7 @@ namespace XDM.Core
         public void DownloadFailed(string id)
         {
             AppDB.Instance.Downloads.UpdateDownloadStatus(id, DownloadStatus.Stopped);
+            DownloadControllerRuntimeState.Remove(id);
             RunOnUiThread(() =>
             {
                 CallbackActions.DownloadFailed(id);
@@ -114,6 +116,7 @@ namespace XDM.Core
 
         public void DownloadFinished(string id, long finalFileSize, string filePath)
         {
+            DownloadControllerRuntimeState.Remove(id);
             if (!string.IsNullOrEmpty(filePath))
             {
                 var name = Path.GetFileName(filePath);
@@ -160,6 +163,7 @@ namespace XDM.Core
 
         public void DownloadStarted(string id)
         {
+            AppDB.Instance.Downloads.UpdateDownloadStatus(id, DownloadStatus.Downloading);
             RunOnUiThread(() =>
             {
                 CallbackActions.DownloadStarted(id);
@@ -230,6 +234,7 @@ namespace XDM.Core
 
         public void SetDownloadStatusWaiting(string id)
         {
+            AppDB.Instance.Downloads.UpdateDownloadStatus(id, DownloadStatus.Waiting);
             RunOnUiThread(() =>
             {
                 var download = ApplicationContext.MainWindow.FindInProgressItem(id);
@@ -313,6 +318,8 @@ namespace XDM.Core
 
         public void UpdateProgress(string id, int progress, double speed, long eta)
         {
+            DownloadControllerRuntimeState.Update(id,
+                FormattingHelper.FormatSize(speed) + "/s", FormattingHelper.ToHMS(eta));
             if (!AppDB.Instance.Downloads.UpdateDownloadProgress(id, progress))
             {
                 Log.Debug("UpdateProgress::failed");
@@ -326,6 +333,16 @@ namespace XDM.Core
             {
                 if (AppDB.Instance.Downloads.LoadDownloads(out var inProgressDownloads, out var finishedDownloads))
                 {
+                    // A previous process cannot still own an active/queued download.
+                    // Normalize persisted transient states before publishing the list.
+                    foreach (var item in inProgressDownloads)
+                    {
+                        if (item.Status == DownloadStatus.Downloading || item.Status == DownloadStatus.Waiting)
+                        {
+                            item.Status = DownloadStatus.Stopped;
+                            AppDB.Instance.Downloads.UpdateDownloadStatus(item.Id, DownloadStatus.Stopped);
+                        }
+                    }
                     ApplicationContext.MainWindow.InProgressDownloads = inProgressDownloads;
                     ApplicationContext.MainWindow.FinishedDownloads = finishedDownloads;
                     return;
