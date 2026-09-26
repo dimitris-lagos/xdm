@@ -1,8 +1,10 @@
 {
     "name": "XDM Integration Module",
-    "action": {},
+    "action": {
+        "default_popup": "popup.html"
+    },
     "manifest_version": 3,
-    "version": "3.3",
+    "version": "3.5.1",
     "description": "Download with Xtreme Download Manager.",
     "host_permissions": [
         "*://*/*"

@@ -1,50 +1,93 @@
-<html>
-
+<!doctype html>
+<html lang="en">
 <head>
-  <script src="popup.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>XDM Integration Module</title>
   <link rel="stylesheet" href="styles.css">
 </head>
-
-<body style="min-width: 400px; font-family:helvetica,arial,courier;">
-  <div style="font-size: 18px; border-bottom: 1px solid lightgray; padding: 15px; ">
-    XDM Integration Module
-  </div>
-  <div>
-    <div id="content">
-      <div id="list" style="min-height: 200px; max-height: 400px; overflow: hidden; overflow-y: auto;">
-
-        <table id="table"
-          style="overflow-y: auto;background: white; margin: 0px; padding: 0px;font-family:helvetica,arial,courier;">
-        </table>
-
-      </div>
-      <div style="padding: 5px; display: flex;">
-        <button id="format" style="flex: 1;" class="flat-button">More formats</button>
-        <div style="padding: 5px;">
-          <div style="width: 1px; background: rgb(230,230,230); height: 20px;">
-
-          </div>
-        </div>
-        <button id="clear" style="flex: 1;" class="flat-button">Clear items</button>
-      </div>
+<body>
+  <header>
+    <img class="brand-mark" src="icon48.png" alt="" aria-hidden="true">
+    <div class="brand-copy">
+      <h1>XDM</h1>
+      <p id="monitoring-status">Integration module</p>
     </div>
-  </div>
-  <div
-    style="font-size: 14px; padding-top: 5px; background-color: rgb(240,240,240);border-top: 1px solid rgb(200,200,200);">
+    <button id="download-checked" class="header-action" type="button" disabled>Download checked</button>
+    <button id="filters" class="icon-button" type="button" title="Filters" aria-label="Filters" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+    </button>
+  </header>
+
+  <section class="monitoring-panel">
     <div>
-      <div
-        style="display: flex; justify-content: space-between; padding: 20px; padding-top: 10px; padding-bottom: 10px;">
-        <!--span>Browser monitoring</span-->
-
-        <label class="container">Browser monitoring
-          <input type="checkbox" id="chk">
-          <span class="checkmark"></span>
-        </label>
-        <!-- <button class="primary-button">Connect with XDM</button> -->
-        <!--input type="checkbox" id="chk" /-->
-      </div>
+      <strong>Browser monitoring</strong>
+      <small id="monitoring-description">Let XDM capture browser downloads</small>
     </div>
-  </div>
-</body>
+    <label class="monitoring-switch">
+      <input id="chk" type="checkbox" aria-label="Enable browser monitoring">
+      <span class="switch-track"><span class="switch-thumb"></span></span>
+      <span id="monitoring-label" class="switch-label">On</span>
+    </label>
+  </section>
 
+  <section id="filter-panel" class="filter-panel" hidden>
+    <div class="filter-heading">
+      <div>
+        <strong>Media filters</strong>
+        <small>Formats combine; quality applies by media type</small>
+      </div>
+      <button id="reset-filters" class="text-button" type="button">Reset</button>
+    </div>
+    <fieldset>
+      <legend>Extensions</legend>
+      <div id="extension-filters" class="filter-chips"></div>
+    </fieldset>
+    <div class="filter-grid">
+      <label>
+        <span>Video quality</span>
+        <select id="video-quality">
+          <option value="">Any</option>
+        </select>
+      </label>
+      <label>
+        <span>Sound quality</span>
+        <select id="audio-quality">
+          <option value="">Any</option>
+        </select>
+      </label>
+      <label class="size-filter">
+        <span>Minimum size</span>
+        <span class="number-control"><input id="minimum-size" type="number" min="0" step="1" inputmode="numeric" value="0"><span>MB</span></span>
+      </label>
+    </div>
+    <p id="filter-result" class="filter-result">Showing all detected media</p>
+  </section>
+
+  <main>
+    <div id="empty" class="empty">No media detected on this page.</div>
+    <div id="list" class="media-list" aria-live="polite"></div>
+  </main>
+
+  <footer id="footer-actions" hidden>
+    <button id="format" class="secondary-button" type="button">More formats</button>
+    <button id="clear" class="secondary-button danger" type="button">Clear items</button>
+  </footer>
+
+  <template id="media-template">
+    <article class="media-card">
+      <label class="selection" title="Select download">
+        <input class="media-checkbox" type="checkbox" aria-label="Select download">
+        <span class="selection-box"></span>
+      </label>
+      <div class="media-copy">
+        <div class="media-name"></div>
+        <div class="media-info"></div>
+      </div>
+      <button class="download-button" type="button">Download</button>
+    </article>
+  </template>
+
+  <script type="module" src="popup.js"></script>
+</body>
 </html>

@@ -8,6 +8,7 @@ using XDM.Core.MediaParser.Hls;
 using XDM.Core.MediaParser.Dash;
 using XDM.Core.MediaParser.YouTube;
 using System.Security.Cryptography;
+using System.Diagnostics;
 using TraceLog;
 using XDM.Core.Clients.Http;
 using XDM.Core.Downloader.Progressive.DualHttp;
@@ -31,6 +32,7 @@ namespace XDM.Core.BrowserMonitoring
                                                                              //as they were triggered by HLS or DASH 
         private static HashSet<string> m3u8MpdTabs = new(); //Keep track of tab id which triggered m3u8 or mpd manifest
         private static HashSet<string> suspectedMp4Fragments = new();
+        private static readonly HlsVariantMetadataCache hlsVariantMetadata = new();
 
         public static void ProcessMediaMessage(Message message)
         {
@@ -72,6 +74,7 @@ namespace XDM.Core.BrowserMonitoring
             }
             if (!string.IsNullOrEmpty(tabId) && m3u8MpdTabs.Contains(tabId))
             {
+                MediaDiagnostics.Write("normal.tab-skipped", url, tabId, "tab already has HLS/DASH", size);
                 return false;
             }
             if (url.ToLowerInvariant().Contains("init.mp4"))
@@ -339,10 +342,15 @@ namespace XDM.Core.BrowserMonitoring
                 m3u8MpdTabs.Add(message.TabId);
             }
             AddToSkippedRefererList(message.GetRequestHeaderFirstValue("Referer"));
+            AddToSkippedRefererList(message.Url);
+            var timer = Stopwatch.StartNew();
+            MediaDiagnostics.Write("hls.request", message.Url, message.TabId);
 
             var manifest = DownloadManifest(message);
             if (manifest != null)
             {
+                MediaDiagnostics.Write("hls.manifest-loaded", message.Url, message.TabId,
+                    elapsedMilliseconds: timer.ElapsedMilliseconds);
                 var manifestText = File.ReadAllText(manifest);
                 if (manifestText.Contains(HlsParser.EXT_X_STREAM_INF))
                 {
@@ -353,6 +361,8 @@ namespace XDM.Core.BrowserMonitoring
                         Log.Debug("Master playlist contains: " + playlists.Count);
                         foreach (var plc in playlists)
                         {
+                            hlsVariantMetadata.Remember(plc.VideoPlaylist, plc.Quality);
+                            hlsVariantMetadata.RememberAudio(plc.AudioPlaylist);
                             var type = (plc.AudioPlaylist != null && plc.VideoPlaylist != null ? "MP4" : "TS");
                             var video = new MultiSourceHLSDownloadInfo
                             {
@@ -373,6 +383,8 @@ namespace XDM.Core.BrowserMonitoring
                                 CreationTime = DateTime.Now,
                                 TabId = message.TabId
                             }, video);
+                            MediaDiagnostics.Write("hls.master-entry", plc.VideoPlaylist?.ToString(), message.TabId,
+                                displayText, elapsedMilliseconds: timer.ElapsedMilliseconds);
                         }
                     }
                 }
@@ -384,10 +396,18 @@ namespace XDM.Core.BrowserMonitoring
                         return;
                     }
                     Log.Debug("Not Master playlist");
+                    if (hlsVariantMetadata.IsKnownChild(message.Url, out var masterQuality))
+                    {
+                        MediaDiagnostics.Write("hls.child-skipped", message.Url, message.TabId,
+                            string.IsNullOrEmpty(masterQuality) ? "audio-child" : masterQuality,
+                            elapsedMilliseconds: timer.ElapsedMilliseconds);
+                        return;
+                    }
                     var mediaPlaylist = HlsParser.ParseMediaSegments(manifestText.Split('\n'), message.Url);
                     if (mediaPlaylist == null) return;
                     var file = FileHelper.GetFileName(mediaPlaylist.MediaSegments.Last().Url);
-                    var container = FileExtensionHelper.GuessContainerFormatFromSegmentExtension(Path.GetExtension(file));
+                    var container = (FileExtensionHelper.GuessContainerFormatFromSegmentExtension(Path.GetExtension(file)) ?? "TS")
+                        .TrimStart('.').ToUpperInvariant();
                     var video = new MultiSourceHLSDownloadInfo
                     {
                         VideoUri = message.Url,
@@ -402,6 +422,9 @@ namespace XDM.Core.BrowserMonitoring
                         CreationTime = DateTime.Now,
                         TabId = message.TabId
                     }, video);
+                    MediaDiagnostics.Write("hls.standalone-entry", message.Url, message.TabId, displayText,
+                        elapsedMilliseconds: timer.ElapsedMilliseconds);
+                    HlsMediaProbe.EnrichInBackground(message, container);
                 }
             }
         }
@@ -616,6 +639,8 @@ namespace XDM.Core.BrowserMonitoring
         {
             if (IsMediaFragment(message.GetRequestHeaderFirstValue("Referer")))
             {
+                MediaDiagnostics.Write("normal.fragment-skipped", message.Url, message.TabId,
+                    detail: "referer matched HLS/DASH manifest", size: message.GetContentLength());
                 Log.Debug($"Skipping url:{message.Url} as it seems a media fragment");
                 return;
             }
@@ -685,6 +710,7 @@ namespace XDM.Core.BrowserMonitoring
 
             var size = long.Parse(message.GetResponseHeaderFirstValue("Content-Length"));
             var displayText = $"[{ext.ToUpperInvariant()}] {(size > 0 ? FormattingHelper.FormatSize(size) : string.Empty)}";
+            MediaDiagnostics.Write("normal.entry", message.Url, message.TabId, displayText, size);
             ApplicationContext.VideoTracker.AddVideoNotification(new StreamingVideoDisplayInfo
             {
                 Quality = displayText,

@@ -38,11 +38,22 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\chrome-extension\**" CopyToOutputDirectory="Always" LinkBase="chrome-extension\" />
+    <Content Include="..\chrome-extension\**"
+             Exclude="..\chrome-extension\tests\**"
+             CopyToOutputDirectory="Always"
+             LinkBase="chrome-extension\" />
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\download-controller-extension\**" CopyToOutputDirectory="Always" LinkBase="download-controller-extension\" />
+    <Content Include="..\download-controller-extension\**"
+             Exclude="..\download-controller-extension\tests\**;..\download-controller-extension\README.md;..\download-controller-extension\package.json;..\download-controller-extension\*.zip"
+             CopyToOutputDirectory="Always"
+             LinkBase="download-controller-extension\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\XDM.WinForms.IntegrationUI\XDM.WinForms.IntegrationUI.csproj"
+                      ReferenceOutputAssembly="false" />
   </ItemGroup>
 
   <ItemGroup>
@@ -122,6 +133,13 @@
   <Import Project="..\XDM.Messaging\XDM.Messaging.projitems" Label="Shared" />
 
   <Import Project="..\XDM.Compatibility\XDM.Compatibility.projitems" Label="Shared" />
+
+  <Target Name="CopyExtensionGuide" AfterTargets="Build">
+    <ItemGroup>
+      <_ExtensionGuideFiles Include="..\XDM.WinForms.IntegrationUI\bin\$(Configuration)\net4.7.2\xdm-guide.exe*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_ExtensionGuideFiles)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+  </Target>
 
   <!--<Import Project="..\NativeMessaging\NativeMessaging.projitems" Label="Shared" />-->
 

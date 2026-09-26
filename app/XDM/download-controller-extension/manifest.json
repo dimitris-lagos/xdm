@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "XDM Download Controller",
   "description": "View and control Xtreme Download Manager downloads.",
-  "version": "1.2.0",
+  "version": "1.3.1",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAyghJuv05utidh6F6DzkqPJ9iE0mW6OlZBP0t/iVoNl2xNkhr8yatbVCkk9QeXPVcNwKH4qVUq6Bb+6lkbw3+Jh49YIhkikzL5xfpCZDS/iRrhp3DUWzA8NU7/ejHbB+7YwfT47opBzi8oceVshbeXCr8Ntln8p3BVZscb312jtF5MValgkT5iZ0nH664uhgaPt4XLEp/S7QB7dIxWUifo/mFQ22WPpUtlTsQjm5QSxRfVJPdFo9Q76PRqNw4t0RUCzuUhgbXbLEV4fTxDMvV7dGoEZM0b8nbHPSTL70dz3P1PDJseMLq3dvI5+BWELhKRZLrieju8oq+NzJXEx9AhwIDAQAB",
   "permissions": [
     "alarms",

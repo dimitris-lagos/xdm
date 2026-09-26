@@ -35,5 +35,6 @@ namespace XDM.Core.BrowserMonitoring
         void AddVideoDownload(string videoId);
         List<MediaInfo> GetVideoList();
         void UpdateMediaTitle(string tabUrl, string tabTitle);
+        void UpdateMediaQuality(string sourceUrl, string quality);
     }
 }

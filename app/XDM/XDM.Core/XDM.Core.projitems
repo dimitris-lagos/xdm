@@ -42,6 +42,9 @@
     <Compile Include="$(MSBuildThisFileDirectory)BrowserMonitoring\IpcHttpMessageProcessor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)BrowserMonitoring\DownloadControllerProtocol.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)BrowserMonitoring\DownloadControllerApi.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)BrowserMonitoring\HlsMediaProbe.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)BrowserMonitoring\HlsVariantMetadataCache.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)BrowserMonitoring\MediaDiagnostics.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)BrowserMonitoring\JsonMessageParser.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)BrowserMonitoring\NativeMessagingConfigurer.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)BrowserMonitoring\PipeChannel.cs" />

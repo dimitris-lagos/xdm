@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using XDM.Core.HttpServer;
 using XDM.Core.DataAccess;
+using XDM.Core.Util;
 
 namespace XDM.Core.BrowserMonitoring
 {
@@ -148,6 +149,12 @@ namespace XDM.Core.BrowserMonitoring
                         break;
                     case "restart":
                         ApplicationContext.CoreService.RestartDownload(entry);
+                        break;
+                    case "open":
+                        PlatformHelper.OpenFile(System.IO.Path.Combine(entry.TargetDir, entry.Name));
+                        break;
+                    case "open-folder":
+                        PlatformHelper.OpenFolder(entry.TargetDir, entry.Name);
                         break;
                 }
             });

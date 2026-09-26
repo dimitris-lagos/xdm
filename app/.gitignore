@@ -188,6 +188,10 @@ PublishScripts/
 *.snupkg
 # The packages folder can be ignored because of Package Restore
 **/[Pp]ackages/*
+# XDM ships reviewed browser-extension release bundles from this directory.
+!XDM/packages/
+!XDM/packages/**
+XDM/packages/*/
 # except build/, which is used as an MSBuild target.
 !**/[Pp]ackages/build/
 # Uncomment if necessary however generally it will be regenerated when needed

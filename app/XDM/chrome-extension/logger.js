@@ -9,4 +9,8 @@ export default class Logger {
             console.log(content);
         }
     }
+
+    event(name, details = {}) {
+        if (this.loggingEnabled) console.debug(`[XDM] ${name}`, details);
+    }
 }

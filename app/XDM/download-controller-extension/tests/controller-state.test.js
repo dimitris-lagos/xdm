@@ -2,14 +2,19 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
-import { actionsForState, summarizeDownloads } from "../controller-state.js";
+import {
+  DEFAULT_ACTIVITY_STATE,
+  actionsForState,
+  summarizeDownloads,
+  transitionActivity
+} from "../controller-state.js";
 import { filterDownloads } from "../download-scope.js";
 
 test("maps states to the intended actions", () => {
   assert.deepEqual(actionsForState("Downloading"), ["pause", "stop"]);
   assert.deepEqual(actionsForState("Waiting"), ["stop"]);
   assert.deepEqual(actionsForState("Stopped"), ["resume", "restart"]);
-  assert.deepEqual(actionsForState("Finished"), ["restart"]);
+  assert.deepEqual(actionsForState("Finished"), ["open", "open-folder"]);
 });
 
 test("aggregates active, finished, stopped, and empty lists", () => {
@@ -19,6 +24,47 @@ test("aggregates active, finished, stopped, and empty lists", () => {
   assert.equal(summarizeDownloads([{ state: "Finished" }]).allFinished, true);
   assert.equal(summarizeDownloads([{ state: "Finished" }, { state: "Stopped" }]).allFinished, false);
   assert.equal(summarizeDownloads([]).allFinished, false);
+});
+
+test("activity badge moves from count to completion and opening dismisses the checkmark", () => {
+  const active = transitionActivity(
+    summarizeDownloads([{ state: "Downloading" }, { state: "Waiting" }]),
+    DEFAULT_ACTIVITY_STATE
+  );
+  assert.equal(active.toolbar.badgeText, "2");
+  assert.equal(active.toolbar.mode, "active");
+
+  const finished = transitionActivity(
+    summarizeDownloads([{ state: "Finished" }, { state: "Finished" }]),
+    active.state
+  );
+  assert.equal(finished.toolbar.badgeText, "✓");
+  assert.equal(finished.state.completionPending, true);
+
+  const opened = transitionActivity(
+    summarizeDownloads([{ state: "Finished" }, { state: "Finished" }]),
+    finished.state,
+    "controller-opened"
+  );
+  assert.equal(opened.toolbar.badgeText, "");
+  assert.equal(opened.state.completionPending, false);
+});
+
+test("a new download overrides an old checkmark and produces a fresh checkmark", () => {
+  const previous = { hadActiveDownloads: false, completionPending: true, pulseOn: false };
+  const active = transitionActivity(summarizeDownloads([{ state: "Downloading" }]), previous);
+  assert.equal(active.toolbar.badgeText, "1");
+  assert.equal(active.state.completionPending, false);
+
+  const finished = transitionActivity(summarizeDownloads([{ state: "Finished" }]), active.state);
+  assert.equal(finished.toolbar.badgeText, "✓");
+});
+
+test("stopped downloads do not produce a completion checkmark", () => {
+  const active = transitionActivity(summarizeDownloads([{ state: "Downloading" }]), DEFAULT_ACTIVITY_STATE);
+  const stopped = transitionActivity(summarizeDownloads([{ state: "Stopped" }]), active.state);
+  assert.equal(stopped.toolbar.badgeText, "");
+  assert.equal(stopped.state.hadActiveDownloads, true);
 });
 
 test("manifest uses only narrow permissions", async () => {

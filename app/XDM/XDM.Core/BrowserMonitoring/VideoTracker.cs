@@ -88,6 +88,40 @@ namespace XDM.Core.BrowserMonitoring
             }
         }
 
+        public void UpdateMediaQuality(string sourceUrl, string quality)
+        {
+            if (string.IsNullOrWhiteSpace(sourceUrl) || string.IsNullOrWhiteSpace(quality)) return;
+            lock (this)
+            {
+                var matches = new List<KeyValuePair<string, KeyValuePair<MultiSourceHLSDownloadInfo, StreamingVideoDisplayInfo>>>();
+                foreach (var entry in hlsVideoList)
+                {
+                    var source = entry.Value.Key;
+                    if (string.Equals(source.VideoUri, sourceUrl, StringComparison.Ordinal)
+                        || string.Equals(source.AudioUri, sourceUrl, StringComparison.Ordinal))
+                    {
+                        matches.Add(entry);
+                    }
+                }
+
+                var updated = false;
+                foreach (var entry in matches)
+                {
+                    var source = entry.Value.Key;
+                    var displayInfo = entry.Value.Value;
+                    displayInfo.Quality = quality;
+                    hlsVideoList[entry.Key] = new KeyValuePair<MultiSourceHLSDownloadInfo, StreamingVideoDisplayInfo>(source, displayInfo);
+                    this.MediaUpdated?.Invoke(this, new MediaInfoEventArgs
+                    {
+                        MediaInfo = new MediaInfo(entry.Key, source.File, displayInfo.DescriptionText,
+                            displayInfo.CreationTime, displayInfo.TabId, displayInfo.Size, displayInfo.Quality)
+                    });
+                    updated = true;
+                }
+                if (updated) ApplicationContext.BroadcastConfigChange();
+            }
+        }
+
         public bool IsFFmpegRequiredForDownload(string id)
         {
             return ytVideoList.ContainsKey(id) || dashVideoList.ContainsKey(id) || hlsVideoList.ContainsKey(id);
@@ -135,22 +169,26 @@ namespace XDM.Core.BrowserMonitoring
                 foreach (var e in ytVideoList)
                 {
                     list.Add(new MediaInfo(e.Key, e.Value.Key.File, e.Value.Value.DescriptionText,
-                        e.Value.Value.CreationTime, e.Value.Value.TabId));
+                        e.Value.Value.CreationTime, e.Value.Value.TabId,
+                        e.Value.Value.Size, e.Value.Value.Quality));
                 }
                 foreach (var e in videoList)
                 {
                     list.Add(new MediaInfo(e.Key, e.Value.Key.File, e.Value.Value.DescriptionText,
-                        e.Value.Value.CreationTime, e.Value.Value.TabId));
+                        e.Value.Value.CreationTime, e.Value.Value.TabId,
+                        e.Value.Value.Size, e.Value.Value.Quality));
                 }
                 foreach (var e in hlsVideoList)
                 {
                     list.Add(new MediaInfo(e.Key, e.Value.Key.File, e.Value.Value.DescriptionText,
-                        e.Value.Value.CreationTime, e.Value.Value.TabId));
+                        e.Value.Value.CreationTime, e.Value.Value.TabId,
+                        e.Value.Value.Size, e.Value.Value.Quality));
                 }
                 foreach (var e in dashVideoList)
                 {
                     list.Add(new MediaInfo(e.Key, e.Value.Key.File, e.Value.Value.DescriptionText,
-                        e.Value.Value.CreationTime, e.Value.Value.TabId));
+                        e.Value.Value.CreationTime, e.Value.Value.TabId,
+                        e.Value.Value.Size, e.Value.Value.Quality));
                 }
                 list.Sort((a, b) => a.DateAdded.CompareTo(b.DateAdded));
                 return list;
@@ -261,8 +299,17 @@ namespace XDM.Core.BrowserMonitoring
         {
             lock (this)
             {
+                foreach (var existing in videoList)
+                {
+                    if (!string.Equals(existing.Value.Key.Uri, info.Uri, StringComparison.Ordinal)) continue;
+                    MediaDiagnostics.Write("tracker.duplicate-single", info.Uri, displayInfo.TabId,
+                        displayInfo.Quality, displayInfo.Size);
+                    return;
+                }
                 var id = Guid.NewGuid().ToString();
                 videoList.Add(id, new KeyValuePair<SingleSourceHTTPDownloadInfo, StreamingVideoDisplayInfo>(info, displayInfo));
+                MediaDiagnostics.Write("tracker.add-single", info.Uri, displayInfo.TabId,
+                    displayInfo.Quality, displayInfo.Size);
                 Log.Debug("Video url1: " + info.Uri);
                 this.MediaAdded?.Invoke(this, new MediaInfoEventArgs
                 {
@@ -278,8 +325,18 @@ namespace XDM.Core.BrowserMonitoring
         {
             lock (this)
             {
+                foreach (var existing in hlsVideoList)
+                {
+                    if (!string.Equals(existing.Value.Key.VideoUri, info.VideoUri, StringComparison.Ordinal)
+                        || !string.Equals(existing.Value.Key.AudioUri, info.AudioUri, StringComparison.Ordinal)) continue;
+                    MediaDiagnostics.Write("tracker.duplicate-hls", info.VideoUri, displayInfo.TabId,
+                        displayInfo.Quality, displayInfo.Size);
+                    return;
+                }
                 var id = Guid.NewGuid().ToString();
                 hlsVideoList.Add(id, new KeyValuePair<MultiSourceHLSDownloadInfo, StreamingVideoDisplayInfo>(info, displayInfo));
+                MediaDiagnostics.Write("tracker.add-hls", info.VideoUri, displayInfo.TabId,
+                    displayInfo.Quality, displayInfo.Size);
                 Log.Debug("Video url1: " + info.VideoUri);
                 Log.Debug("Video url2: " + info.AudioUri);
                 this.MediaAdded?.Invoke(this, new MediaInfoEventArgs
@@ -379,13 +436,15 @@ namespace XDM.Core.BrowserMonitoring
     public class MediaInfo
     {
         public MediaInfo(string id, string name, string description,
-            DateTime date, string tabId)
+            DateTime date, string tabId, long size = 0, string quality = "")
         {
             this.ID = id;
             this.Name = name;
             this.Description = description;
             this.DateAdded = date;
             this.TabId = tabId;
+            this.Size = size;
+            this.Quality = quality;
         }
 
         public string ID { get; set; }
@@ -393,6 +452,8 @@ namespace XDM.Core.BrowserMonitoring
         public string Description { get; set; }
         public DateTime DateAdded { get; set; }
         public string TabId { get; set; }
+        public long Size { get; set; }
+        public string Quality { get; set; }
     }
 
     public class MediaInfoEventArgs :EventArgs

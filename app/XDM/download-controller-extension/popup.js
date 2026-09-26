@@ -13,6 +13,8 @@ let allDownloads = [];
 let sessionStartedAt = Date.now();
 let showAllDownloads = false;
 
+chrome.runtime.sendMessage({ type: "controller-opened" });
+
 function formatBytes(value) {
   if (!Number.isFinite(value) || value < 0) return "Size unknown";
   const units = ["B", "KiB", "MiB", "GiB", "TiB"];
@@ -43,7 +45,9 @@ function render(downloads) {
     for (const action of download.actions || []) {
       const button = document.createElement("button");
       button.type = "button";
-      button.textContent = action;
+      button.textContent = action === "open-folder"
+        ? "Open folder"
+        : action.charAt(0).toUpperCase() + action.slice(1);
       button.addEventListener("click", async () => {
         for (const item of actions.querySelectorAll("button")) item.disabled = true;
         try {

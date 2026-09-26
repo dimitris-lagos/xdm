@@ -17,7 +17,9 @@ namespace XDM.WinForms.IntegrationUI
             //Application.SetHighDpiMode(HighDpiMode.SystemAware);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Form1());
+            var args = Environment.GetCommandLineArgs();
+            var browser = BrowserProfile.FromCommandLine(args.Length > 1 ? args[1] : null);
+            Application.Run(new ExtensionGuideForm(browser));
         }
     }
 }

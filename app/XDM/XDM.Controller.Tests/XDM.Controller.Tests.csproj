@@ -12,7 +12,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\XDM.Tests\DownloadControllerProtocolTests.cs" Link="DownloadControllerProtocolTests.cs" />
+    <Compile Include="..\XDM.Tests\HlsVariantMetadataCacheTests.cs" Link="HlsVariantMetadataCacheTests.cs" />
     <Compile Include="..\XDM.Core\BrowserMonitoring\DownloadControllerProtocol.cs" Link="DownloadControllerProtocol.cs" />
+    <Compile Include="..\XDM.Core\BrowserMonitoring\HlsVariantMetadataCache.cs" Link="HlsVariantMetadataCache.cs" />
     <Compile Include="..\XDM.Core\HttpServer\HttpParser.cs" Link="HttpParser.cs" />
     <Compile Include="..\XDM.Core\HttpServer\LineReader.cs" Link="LineReader.cs" />
     <Compile Include="..\XDM.Core\HttpServer\RequestContext.cs" Link="RequestContext.cs" />

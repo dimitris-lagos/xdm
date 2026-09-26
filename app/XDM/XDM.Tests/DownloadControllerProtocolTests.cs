@@ -88,7 +88,9 @@ namespace XDM.Tests
         [TestCase("Waiting", "pause", false)]
         [TestCase("Stopped", "resume", true)]
         [TestCase("Stopped", "restart", true)]
-        [TestCase("Finished", "restart", true)]
+        [TestCase("Finished", "restart", false)]
+        [TestCase("Finished", "open", true)]
+        [TestCase("Finished", "open-folder", true)]
         [TestCase("Finished", "resume", false)]
         public void EnforcesStateActionMatrix(string state, string action, bool expected)
         {
@@ -100,6 +102,7 @@ namespace XDM.Tests
         {
             Assert.That(DownloadControllerProtocol.TryParseActionPath("/controller/v1/downloads/abc/resume", out var id, out _), Is.True);
             Assert.That(id, Is.EqualTo("abc"));
+            Assert.That(DownloadControllerProtocol.TryParseActionPath("/controller/v1/downloads/abc/open-folder", out _, out _), Is.True);
             Assert.That(DownloadControllerProtocol.TryParseActionPath("/controller/v1/downloads/a%2Fb/resume", out _, out _), Is.False);
             Assert.That(DownloadControllerProtocol.TryParseActionPath("/controller/v1/downloads/abc/delete", out _, out _), Is.False);
         }

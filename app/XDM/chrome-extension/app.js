@@ -2,29 +2,46 @@
 import Logger from './logger.js';
 import RequestWatcher from './request-watcher.js';
 import Connector from './connector.js';
+import { DEFAULT_FILTERS, filterMedia, normalizeFilters } from './media-filter.mjs';
+import { CONNECTION_STATUS, ExtensionStateStore } from './extension-state.mjs';
 
 export default class App {
     constructor() {
         this.logger = new Logger();
-        this.videoList = [];
         this.blockedHosts = [];
         this.fileExts = [];
         this.requestWatcher = new RequestWatcher(this.onRequestDataReceived.bind(this));
         this.tabsWatcher = [];
-        this.userDisabled = false;
-        this.appEnabled = false;
+        this.stateStore = new ExtensionStateStore();
+        this.popupPorts = new Set();
         this.onDownloadCreatedCallback = this.onDownloadCreated.bind(this);
         this.onDeterminingFilenameCallback = this.onDeterminingFilename.bind(this);
         this.onTabUpdateCallback = this.onTabUpdate.bind(this);
         this.activeTabId = -1;
+        this.mediaFilters = normalizeFilters(DEFAULT_FILTERS);
         this.connector = new Connector(this.onMessage.bind(this), this.onDisconnect.bind(this));
+        this.stateStore.subscribe(snapshot => this.onStateChanged(snapshot));
     }
 
     start() {
         this.logger.log("starting...");
         this.starAppConnector();
         this.register();
+        this.loadMediaFilters();
         this.logger.log("started.");
+    }
+
+    loadMediaFilters() {
+        chrome.storage.local.get({ mediaFilters: DEFAULT_FILTERS }, result => {
+            this.mediaFilters = normalizeFilters(result.mediaFilters);
+            this.updateActionIcon();
+        });
+        chrome.storage.onChanged.addListener((changes, areaName) => {
+            if (areaName === 'local' && changes.mediaFilters) {
+                this.mediaFilters = normalizeFilters(changes.mediaFilters.newValue);
+                this.updateActionIcon();
+            }
+        });
     }
 
     starAppConnector() {
@@ -33,36 +50,40 @@ export default class App {
 
     onMessage(msg) {
         this.logger.log("message from XDM");
-        this.logger.log(msg);
-        this.appEnabled = msg.enabled === true;
+        this.logger.event('state.sync', {
+            enabled: msg.enabled === true,
+            mediaCount: Array.isArray(msg.videoList) ? msg.videoList.length : 0
+        });
         this.fileExts = msg.fileExts;
         this.blockedHosts = msg.blockedHosts;
         this.tabsWatcher = msg.tabsWatcher;
-        this.videoList = msg.videoList;
         this.requestWatcher.updateConfig({
             mediaExts: msg.requestFileExts,
             blockedHosts: msg.blockedHosts,
             matchingHosts: msg.matchingHosts,
             mediaTypes: msg.mediaTypes
         });
-        this.updateActionIcon();
+        this.stateStore.applySync(msg);
     }
 
     onDisconnect() {
         this.logger.log("Disconnected from native host!");
         this.logger.log("Disconnected...");
-        this.updateActionIcon();
+        this.stateStore.setConnection(CONNECTION_STATUS.DISCONNECTED);
     }
 
     isMonitoringEnabled() {
-        this.logger.log(this.appEnabled + " " + this.userDisabled);
-        return this.appEnabled === true && this.userDisabled === false && this.connector.isConnected();
+        return this.stateStore.snapshot().monitoringEnabled;
     }
 
     onRequestDataReceived(data) {
         //Streaming video data received, send to native messaging application
         this.logger.log("onRequestDataReceived");
-        this.logger.log(data);
+        this.logger.event('media.capture', {
+            tabId: data.tabId,
+            contentType: data.responseHeaders?.['Content-Type']?.[0] || '',
+            contentLength: data.responseHeaders?.['Content-Length']?.[0] || 0
+        });
         this.isMonitoringEnabled() && this.connector.isConnected() && this.connector.postMessage("/media", data);
     }
 
@@ -124,6 +145,7 @@ export default class App {
             this.onTabUpdateCallback
         );
         chrome.runtime.onMessage.addListener(this.onPopupMessage.bind(this));
+        chrome.runtime.onConnect.addListener(this.onPopupConnected.bind(this));
         this.requestWatcher.register();
         this.attachContextMenu();
         chrome.tabs.onActivated.addListener(this.onTabActivated.bind(this));
@@ -154,9 +176,10 @@ export default class App {
 
     updateActionIcon() {
         chrome.action.setIcon({ path: this.getActionIcon() });
+        const state = this.stateStore.snapshot();
         let vc = "";
-        if (this.videoList && this.videoList.length > 0) {
-            let len = this.videoList.length;
+        if (state.list.length > 0) {
+            let len = filterMedia(state.list, this.mediaFilters).length;
             if (len > 0) {
                 vc = len + "";
             }
@@ -176,22 +199,6 @@ export default class App {
         //     }
         // }
         chrome.action.setBadgeText({ text: vc });
-        if (!this.connector.isConnected()) {
-            this.logger.log("Not connected...");
-            chrome.action.setPopup({ popup: "./error.html" });
-            return;
-        }
-        if (!this.appEnabled) {
-            chrome.action.setPopup({ popup: "./disabled.html" });
-            return;
-        }
-        else {
-            chrome.action.setPopup({ popup: "./popup.html" });
-            return;
-            // if (this.videoList && this.videoList.length > 0) {
-            //     chrome.action.setBadgeText({ text: this.videoList.length + "" });
-            // }
-        }
     }
 
     getActionIconName(icon) {
@@ -247,36 +254,56 @@ export default class App {
     onPopupMessage(request, sender, sendResponse) {
         this.logger.log(request.type);
         if (request.type === "stat") {
-            let resp = {
-                enabled: this.isMonitoringEnabled(),
-                list: this.videoList
-                // list: this.videoList.filter(vid => {
-                //     if (!vid.tabId) {
-                //         return true;
-                //     }
-                //     return (vid.tabId == this.activeTabId);
-                // })
-            };
-            sendResponse(resp);
+            sendResponse(this.stateStore.snapshot());
         }
         else if (request.type === "cmd") {
-            this.userDisabled = request.enabled === false;
             this.logger.log("request.enabled:" + request.enabled);
+            this.stateStore.setUserEnabled(request.enabled === true);
             if (request.enabled && !this.connector.isConnected()) {
-                this.connector.launchApp();
-                return;
+                this.connector.refresh().catch(() => this.connector.launchApp());
             }
-            this.updateActionIcon();
+            sendResponse(this.stateStore.snapshot());
         }
         else if (request.type === "vid") {
             let vid = request.itemId;
             this.connector.postMessage("/vid", {
                 vid: vid + "",
-            });
+            }).then(() => sendResponse({ ok: true }))
+                .catch(() => sendResponse({ ok: false }));
+            return true;
         }
         else if (request.type === "clear") {
             this.connector.postMessage("/clear", {});
         }
+    }
+
+    onStateChanged(snapshot) {
+        this.logger.event('state.publish', {
+            revision: snapshot.revision,
+            mediaRevision: snapshot.mediaRevision,
+            connection: snapshot.connection,
+            mediaCount: snapshot.list.length,
+            subscribers: this.popupPorts.size
+        });
+        this.updateActionIcon();
+        this.popupPorts.forEach(port => {
+            try {
+                port.postMessage(snapshot);
+            } catch {
+                this.popupPorts.delete(port);
+            }
+        });
+    }
+
+    onPopupConnected(port) {
+        if (port.name !== 'xdm-popup-state') return;
+        this.popupPorts.add(port);
+        port.postMessage(this.stateStore.snapshot());
+        this.connector.setInteractive(true);
+        port.onDisconnect.addListener(() => {
+            this.popupPorts.delete(port);
+            this.connector.setInteractive(this.popupPorts.size > 0);
+        });
     }
 
     sendLinkToXDM(info, tab) {

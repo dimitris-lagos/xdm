@@ -1,0 +1,2 @@
+92d1951b264845bad11a5db90908270a5bc99bfaa19fe96841dc5df0c61a6df6  xdm-integration-module-chromium-v3.5.1.zip
+a079fa7f97596a8169e5c63a2f6ff8f487488401cc3b7c2512c1785664d0f232  xdm-download-controller-chromium-v1.3.1.zip

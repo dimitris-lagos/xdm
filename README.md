@@ -7,13 +7,17 @@ New in this beta:
 - A separate Opera/Chromium **XDM Download Controller** extension with a compact responsive popup.
 - Live download progress, size, speed, ETA, and state-aware Pause, Stop, Resume, and Restart controls.
 - A persistent **Session / All** setting; Session shows only downloads added since Opera started.
-- Background polling with active-count, finished, and offline toolbar badge states.
-- A distinct indigo-purple controller icon, while the original XDM Integration Module remains unchanged.
+- Responsive active-download badge polling, alternating active colors, a completion checkmark that is dismissed when the popup opens, and offline state reporting.
+- A distinct indigo-purple controller icon, while the Integration Module keeps its blue identity.
+- A redesigned compact Integration Module popup with per-media selection, individual and batch download buttons, and persistent filters for extension, video quality, audio quality, and minimum size.
+- A centralized reactive extension state keeps the toolbar and open popup synchronized, with coalesced rendering only when media data changes.
+- HLS master-playlist metadata, child-stream deduplication, fragment filtering, and a bounded background media probe provide accurate format details without blocking the UI.
+- A rebuilt browser-extension guide that detects the selected Chromium-family browser and presents both unpacked extensions for installation.
 - A restricted loopback controller API with a fixed extension identity, process-scoped session token, narrow CORS rules, strict request validation, and no exposed URLs, paths, cookies, credentials, or proxy data.
 - Download snapshots use persisted data plus thread-safe runtime metrics and do not synchronously read or wait on the UI thread.
 - Application and About metadata updated to version 9.0.0 Beta.
 
-The unpacked controller extension is in `app/XDM/download-controller-extension`. A ready-to-extract Opera/Chromium package is available at `app/XDM/xdm-download-controller-opera-v1.2.0.zip`.
+The unpacked extensions are in `app/XDM/chrome-extension` and `app/XDM/download-controller-extension`. Versioned Chromium packages and SHA-256 checksums are generated in `app/XDM/packages` by `app/XDM/scripts/package-extensions.ps1`.
 
 ---
 

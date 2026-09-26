@@ -56,7 +56,7 @@ namespace XDM.Core.BrowserMonitoring
                 case "Downloading": return action == "pause" || action == "stop";
                 case "Waiting": return action == "stop";
                 case "Stopped": return action == "resume" || action == "restart";
-                case "Finished": return action == "restart";
+                case "Finished": return action == "open" || action == "open-folder";
                 default: return false;
             }
         }
@@ -69,7 +69,8 @@ namespace XDM.Core.BrowserMonitoring
             if (!path.StartsWith(prefix, StringComparison.Ordinal)) return false;
             var parts = path.Substring(prefix.Length).Split('/');
             if (parts.Length != 2 || !IsValidId(parts[0])) return false;
-            if (parts[1] != "pause" && parts[1] != "resume" && parts[1] != "stop" && parts[1] != "restart") return false;
+            if (parts[1] != "pause" && parts[1] != "resume" && parts[1] != "stop" && parts[1] != "restart"
+                && parts[1] != "open" && parts[1] != "open-folder") return false;
             id = parts[0];
             action = parts[1];
             return true;
@@ -82,7 +83,7 @@ namespace XDM.Core.BrowserMonitoring
                 case "Downloading": return new[] { "pause", "stop" };
                 case "Waiting": return new[] { "stop" };
                 case "Stopped": return new[] { "resume", "restart" };
-                case "Finished": return new[] { "restart" };
+                case "Finished": return new[] { "open", "open-folder" };
                 default: return Array.Empty<string>();
             }
         }

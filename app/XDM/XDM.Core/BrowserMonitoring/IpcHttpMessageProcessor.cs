@@ -50,6 +50,11 @@ namespace XDM.Core.BrowserMonitoring
             try
             {
                 if (downloadController.TryHandle(context)) return;
+                if (context.RequestPath == "/diagnostics")
+                {
+                    OnDiagnosticsMessage(context);
+                    return;
+                }
                 switch (context.RequestPath)
                 {
                     case "/sync":
@@ -90,6 +95,15 @@ namespace XDM.Core.BrowserMonitoring
                 }
                 throw;
             }
+        }
+
+        private static void OnDiagnosticsMessage(RequestContext context)
+        {
+            context.ResponseStatus = new ResponseStatus { StatusCode = 200, StatusMessage = "OK" };
+            context.AddResponseHeader("Content-Type", "application/json; charset=utf-8");
+            context.AddResponseHeader("Cache-Control", "no-store");
+            context.ResponseBody = Encoding.UTF8.GetBytes(MediaDiagnostics.ToJson());
+            context.SendResponse();
         }
 
         private void OnArgsMessage(RequestContext context)
@@ -352,6 +366,15 @@ namespace XDM.Core.BrowserMonitoring
 
                     writer.WritePropertyName("info");
                     writer.WriteValue(video.Description);
+
+                    writer.WritePropertyName("extension");
+                    writer.WriteValue(Path.GetExtension(video.Name)?.TrimStart('.').ToLowerInvariant() ?? string.Empty);
+
+                    writer.WritePropertyName("quality");
+                    writer.WriteValue(video.Quality);
+
+                    writer.WritePropertyName("size");
+                    writer.WriteValue(video.Size);
 
                     writer.WritePropertyName("tabId");
                     writer.WriteValue(video.TabId);
