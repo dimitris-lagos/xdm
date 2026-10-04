@@ -60,15 +60,10 @@ The new setup wizard selects x86 on 32-bit Windows and x64 on 64-bit Windows, wi
     <th>Download Controller</th>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/integration-module.png" width="340" alt="XDM Integration Module showing detected video and audio formats with individual download buttons"></td>
+    <td><img src="docs/screenshots/integration-filters.png" width="340" alt="XDM Integration Module showing browser monitoring, yt-dlp extraction, media filters, and detected formats"></td>
     <td><img src="docs/screenshots/download-controller.png" width="340" alt="XDM Download Controller showing downloading, waiting, stopped, and completed downloads with their available actions"></td>
   </tr>
 </table>
-
-<details>
-  <summary><strong>Integration options and media filters</strong></summary>
-  <p><img src="docs/screenshots/integration-filters.png" width="340" alt="Integration options showing the yt-dlp switch, extension and codec filters, quality selectors, and minimum size"></p>
-</details>
 
 Screenshots use the shipped popup interfaces with illustrative sample data.
 
