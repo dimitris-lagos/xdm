@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -58,6 +58,7 @@ namespace XDM.Wpf.UI
         {
             //CopyFilesRecursively(AppDomain.CurrentDomain.BaseDirectory,
             //            Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "chrome-extension");
+            if (!IsAppContainer) return;
             CopyFilesRecursively(AppDomain.CurrentDomain.BaseDirectory,
                         Config.AppDir, "chrome-extension");
         }

@@ -352,3 +352,7 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
+
+# Pinned offline NuGet feed for the Windows release pipeline.
+!XDM/release-assets/nuget/
+!XDM/release-assets/nuget/*.nupkg

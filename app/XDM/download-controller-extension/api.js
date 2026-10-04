@@ -52,3 +52,17 @@ export async function runAction(id, action) {
     body: "{}"
   });
 }
+
+export async function connectEvents(cursor = {}) {
+  // Acquire fresh credentials on reconnect, including after an XDM restart.
+  await openSession();
+  const query = new URLSearchParams();
+  if (cursor.epoch && Number.isSafeInteger(cursor.sequence)) {
+    query.set("epoch", cursor.epoch);
+    query.set("after", String(cursor.sequence));
+  }
+  return new WebSocket(
+    BASE_URL.replace("http:", "ws:") + "/events?" + query,
+    ["xdm-controller", token]
+  );
+}

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
@@ -14,7 +14,7 @@ namespace XDM.Wpf.UI.Dialogs.ChromeIntegrator
         public Page3()
         {
             InitializeComponent();
-            TxtFolder.Text = System.IO.Path.Combine(Config.AppDir, "chrome-extension");
+            TxtFolder.Text = System.IO.Path.Combine(MsixHelper.IsAppContainer ? Config.AppDir : AppDomain.CurrentDomain.BaseDirectory, "chrome-extension");
             this.Img.Source = new BitmapImage(
                     new Uri(
                     System.IO.Path.Combine(

@@ -166,6 +166,12 @@ namespace XDM.Core.IO
                     case "DefaltDownloadSpeed":
                         instance.DefaltDownloadSpeed = r.ReadInt32();
                         break;
+                    case "SkipCleanCompletedConfirmation":
+                        instance.SkipCleanCompletedConfirmation = r.ReadBoolean();
+                        break;
+                    case "IsYtdlpEnabled":
+                        instance.IsYtdlpEnabled = r.ReadBoolean();
+                        break;
                     case "IsBrowserMonitoringEnabled":
                         instance.IsBrowserMonitoringEnabled = r.ReadBoolean();
                         break;
@@ -357,6 +363,10 @@ namespace XDM.Core.IO
             WriteBoolean(w, instance.EnableSpeedLimit, "EnableSpeedLimit");
             count++;
             WriteBoolean(w, instance.FetchServerTimeStamp, "FetchServerTimeStamp");
+            count++;
+            WriteBoolean(w, instance.SkipCleanCompletedConfirmation, "SkipCleanCompletedConfirmation");
+            count++;
+            WriteBoolean(w, instance.IsYtdlpEnabled, "IsYtdlpEnabled");
             count++;
             WriteBoolean(w, instance.IsBrowserMonitoringEnabled, "IsBrowserMonitoringEnabled");
             count++;

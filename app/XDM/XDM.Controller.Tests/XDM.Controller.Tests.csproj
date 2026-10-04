@@ -7,12 +7,18 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.9.4" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
     <PackageReference Include="NUnit" Version="3.13.1" />
     <PackageReference Include="NUnit3TestAdapter" Version="3.17.0" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\XDM.Tests\DownloadCaptureDeduplicatorTests.cs" Link="DownloadCaptureDeduplicatorTests.cs" />
+    <Compile Include="..\XDM.Core\BrowserMonitoring\DownloadCaptureDeduplicator.cs" Link="DownloadCaptureDeduplicator.cs" />
     <Compile Include="..\XDM.Tests\DownloadControllerProtocolTests.cs" Link="DownloadControllerProtocolTests.cs" />
+    <Compile Include="..\XDM.Tests\YouTubeFormatCatalogTests.cs" Link="YouTubeFormatCatalogTests.cs" />
+    <Compile Include="..\XDM.Core\BrowserMonitoring\YouTubeFormatCatalog.cs" Link="YouTubeFormatCatalog.cs" />
     <Compile Include="..\XDM.Tests\HlsVariantMetadataCacheTests.cs" Link="HlsVariantMetadataCacheTests.cs" />
+    <Compile Include="..\XDM.Core\BrowserMonitoring\DownloadControllerEvents.cs" Link="DownloadControllerEvents.cs" />
     <Compile Include="..\XDM.Core\BrowserMonitoring\DownloadControllerProtocol.cs" Link="DownloadControllerProtocol.cs" />
     <Compile Include="..\XDM.Core\BrowserMonitoring\HlsVariantMetadataCache.cs" Link="HlsVariantMetadataCache.cs" />
     <Compile Include="..\XDM.Core\HttpServer\HttpParser.cs" Link="HttpParser.cs" />

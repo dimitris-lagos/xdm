@@ -14,7 +14,7 @@
       <p id="monitoring-status">Integration module</p>
     </div>
     <button id="download-checked" class="header-action" type="button" disabled>Download checked</button>
-    <button id="filters" class="icon-button" type="button" title="Filters" aria-label="Filters" aria-expanded="false">
+    <button id="filters" class="icon-button" type="button" title="Options and filters" aria-label="Options and filters" aria-expanded="false">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
     </button>
   </header>
@@ -32,6 +32,14 @@
   </section>
 
   <section id="filter-panel" class="filter-panel" hidden>
+    <section class="monitoring-panel ytdlp-option">
+      <div><strong>yt-dlp extraction</strong><small id="ytdlp-description">Automatically find YouTube video formats</small></div>
+      <label class="monitoring-switch">
+        <input id="ytdlp-toggle" type="checkbox" role="switch" aria-label="Enable automatic yt-dlp extraction">
+        <span class="switch-track"><span class="switch-thumb"></span></span>
+        <span id="ytdlp-label" class="switch-label">On</span>
+      </label>
+    </section>
     <div class="filter-heading">
       <div>
         <strong>Media filters</strong>
@@ -42,6 +50,14 @@
     <fieldset>
       <legend>Extensions</legend>
       <div id="extension-filters" class="filter-chips"></div>
+    </fieldset>
+    <fieldset>
+      <legend>Video codecs</legend>
+      <div id="codec-filters" class="filter-chips"></div>
+    </fieldset>
+    <fieldset>
+      <legend>Audio codecs</legend>
+      <div id="audio-codec-filters" class="filter-chips"></div>
     </fieldset>
     <div class="filter-grid">
       <label>

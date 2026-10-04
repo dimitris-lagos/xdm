@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi" xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+  <Product Id="*" Name="Xtreme Download Manager" Language="1033" Version="$(var.Version)" Manufacturer="Subhra Das Gupta" UpgradeCode="3E462F34-3D19-4247-AD64-1B74703555D6">
+    <Package InstallerVersion="500" Compressed="yes" InstallScope="perMachine" Platform="$(var.Arch)" />
+    <MajorUpgrade Schedule="afterInstallInitialize" AllowSameVersionUpgrades="yes" DowngradeErrorMessage="A newer XDM version is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+    <Property Id="NETFRAMEWORKRELEASE"><RegistrySearch Id="NetFxRelease" Root="HKLM" Key="SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full" Name="Release" Type="raw" /></Property>
+    <Condition Message="XDM requires .NET Framework 4.7.2 or newer.">Installed OR NETFRAMEWORKRELEASE &gt;= &quot;#461808&quot;</Condition>
+    <Property Id="CREATE_DESKTOP_SHORTCUT" Value="0" />
+    <Property Id="REBOOT" Value="ReallySuppress" />
+    <util:CloseApplication Id="CloseXdm" Target="xdm-app.exe" EndSessionMessage="yes" ElevatedEndSessionMessage="yes" Timeout="15" RebootPrompt="no" />
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFilesFolder"><Directory Id="INSTALLFOLDER" Name="XDM" /></Directory>
+      <Directory Id="DesktopFolder" />
+      <Directory Id="ProgramMenuFolder"><Directory Id="XdmMenu" Name="Xtreme Download Manager" /></Directory>
+    </Directory>
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="DownloadedMediaCleanup" Guid="*" Win64="$(var.Win64)">
+        <RegistryValue Root="HKLM" Key="Software\Xtreme Download Manager" Name="DownloadedMedia" Type="integer" Value="1" KeyPath="yes" />
+        <RemoveFile Id="RemoveDownloadedYtdlp" Name="yt-dlp.exe" On="uninstall" />
+        <RemoveFile Id="RemoveDownloadedFfmpeg" Name="ffmpeg.exe" On="uninstall" />
+        <RemoveFile Id="RemoveDownloadedFfmpegLicense" Name="FFmpeg-LICENSE.txt" On="uninstall" />
+      </Component>
+      <Component Id="Protocol" Guid="*" Win64="$(var.Win64)">
+        <RegistryValue Root="HKLM" Key="Software\Classes\xdm-app" Type="string" Value="URL:Xtreme Download Manager" KeyPath="yes" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\xdm-app" Name="URL Protocol" Type="string" Value="" />
+        <RegistryValue Root="HKLM" Key="Software\Classes\xdm-app\shell\open\command" Type="string" Value="&quot;[INSTALLFOLDER]xdm-app.exe&quot; &quot;%1&quot;" />
+      </Component>
+    </DirectoryRef>
+    <DirectoryRef Id="DesktopFolder">
+      <Component Id="DesktopShortcut" Guid="*" Win64="$(var.Win64)" Transitive="yes">
+        <Condition>CREATE_DESKTOP_SHORTCUT = "1"</Condition>
+        <Shortcut Id="XdmDesktopShortcut" Name="Xtreme Download Manager" Target="[INSTALLFOLDER]xdm-app.exe" WorkingDirectory="INSTALLFOLDER" Icon="XdmIcon" />
+        <RegistryValue Root="HKCU" Key="Software\Xtreme Download Manager" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+    <DirectoryRef Id="XdmMenu">
+      <Component Id="StartMenu" Guid="*" Win64="$(var.Win64)">
+        <Shortcut Id="XdmShortcut" Name="Xtreme Download Manager" Target="[INSTALLFOLDER]xdm-app.exe" WorkingDirectory="INSTALLFOLDER" Icon="XdmIcon" />
+        <RemoveFolder Id="RemoveMenu" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\Xtreme Download Manager" Name="StartMenu" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+    <Icon Id="XdmIcon" SourceFile="$(var.Stage)\xdm-logo.ico" />
+    <Feature Id="Complete" Title="XDM" Level="1">
+      <ComponentGroupRef Id="Payload" />
+      <ComponentRef Id="Protocol" />
+      <ComponentRef Id="DownloadedMediaCleanup" />
+      <ComponentRef Id="StartMenu" />
+      <ComponentRef Id="DesktopShortcut" />
+    </Feature>
+  </Product>
+</Wix>

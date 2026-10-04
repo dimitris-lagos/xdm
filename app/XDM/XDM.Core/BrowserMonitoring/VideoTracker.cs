@@ -24,6 +24,25 @@ namespace XDM.Core.BrowserMonitoring
         public event EventHandler<MediaInfoEventArgs> MediaAdded;
         public event EventHandler<MediaInfoEventArgs> MediaUpdated;
 
+        public void RemoveYouTubeTab(string tabId)
+        {
+            lock (this)
+            {
+                RemoveExtracted(ytVideoList, tabId);
+                RemoveExtracted(videoList, tabId);
+                RemoveExtracted(hlsVideoList, tabId);
+                ApplicationContext.BroadcastConfigChange();
+            }
+        }
+
+        private static void RemoveExtracted<T>(GenericOrderedDictionary<string, KeyValuePair<T, StreamingVideoDisplayInfo>> items, string tabId)
+        {
+            var ids = new List<string>();
+            foreach (var item in items)
+                if (item.Value.Value.YouTubeExtraction && item.Value.Value.TabId == tabId) ids.Add(item.Key);
+            foreach (var id in ids) items.Remove(id);
+        }
+
         public void ClearVideoList()
         {
             ytVideoList.Clear();
@@ -301,7 +320,7 @@ namespace XDM.Core.BrowserMonitoring
             {
                 foreach (var existing in videoList)
                 {
-                    if (!string.Equals(existing.Value.Key.Uri, info.Uri, StringComparison.Ordinal)) continue;
+                    if (existing.Value.Value.TabId != displayInfo.TabId || !string.Equals(existing.Value.Key.Uri, info.Uri, StringComparison.Ordinal)) continue;
                     MediaDiagnostics.Write("tracker.duplicate-single", info.Uri, displayInfo.TabId,
                         displayInfo.Quality, displayInfo.Size);
                     return;
@@ -327,7 +346,7 @@ namespace XDM.Core.BrowserMonitoring
             {
                 foreach (var existing in hlsVideoList)
                 {
-                    if (!string.Equals(existing.Value.Key.VideoUri, info.VideoUri, StringComparison.Ordinal)
+                    if (existing.Value.Value.TabId != displayInfo.TabId || !string.Equals(existing.Value.Key.VideoUri, info.VideoUri, StringComparison.Ordinal)
                         || !string.Equals(existing.Value.Key.AudioUri, info.AudioUri, StringComparison.Ordinal)) continue;
                     MediaDiagnostics.Write("tracker.duplicate-hls", info.VideoUri, displayInfo.TabId,
                         displayInfo.Quality, displayInfo.Size);

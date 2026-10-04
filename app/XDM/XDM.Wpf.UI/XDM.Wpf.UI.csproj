@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -7,7 +7,10 @@
     <!--<TargetFramework>net3.5</TargetFramework>-->
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
-    <Platforms>x86</Platforms>
+    <Platforms>x86;x64</Platforms>
+    <PlatformTarget Condition="'$(Platform)' == 'x64'">x64</PlatformTarget>
+    <PlatformTarget Condition="'$(Platform)' != 'x64'">x86</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
     <LangVersion>9.0</LangVersion>
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -16,9 +19,9 @@
     <StartupObject>XDM.Wpf.UI.App</StartupObject>
     <Description>Xtreme Download Manager</Description>
     <AssemblyTitle>Xtreme Download Manager</AssemblyTitle>
-    <Version>9.0.0</Version>
-    <AssemblyVersion>9.0.0.0</AssemblyVersion>
-    <FileVersion>9.0.0.0</FileVersion>
+    <Version>9.0.2</Version>
+    <AssemblyVersion>9.0.2.0</AssemblyVersion>
+    <FileVersion>9.0.2.0</FileVersion>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <DefineConstants>TRACE;WINDOWS</DefineConstants>
   </PropertyGroup>
@@ -135,10 +138,11 @@
   <Import Project="..\XDM.Compatibility\XDM.Compatibility.projitems" Label="Shared" />
 
   <Target Name="CopyExtensionGuide" AfterTargets="Build">
-    <ItemGroup>
-      <_ExtensionGuideFiles Include="..\XDM.WinForms.IntegrationUI\bin\$(Configuration)\net4.7.2\xdm-guide.exe*" />
-    </ItemGroup>
+    <MSBuild Projects="..\XDM.WinForms.IntegrationUI\XDM.WinForms.IntegrationUI.csproj" Targets="GetTargetPath" BuildInParallel="false">
+      <Output TaskParameter="TargetOutputs" ItemName="_ExtensionGuideFiles" />
+    </MSBuild>
     <Copy SourceFiles="@(_ExtensionGuideFiles)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_ExtensionGuideFiles->&apos;%(FullPath).config&apos;)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
   </Target>
 
   <!--<Import Project="..\NativeMessaging\NativeMessaging.projitems" Label="Shared" />-->

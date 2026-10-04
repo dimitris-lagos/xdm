@@ -12,6 +12,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)AppInfo.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)BrowserMonitoring\Browser.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)BrowserMonitoring\ExtensionData.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)BrowserMonitoring\DownloadCaptureDeduplicator.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)BrowserMonitoring\NativeMessagingHostConfigurer.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Clients\Http\Utils.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\ExtensionRegistrationHelper.cs" />
@@ -30,6 +31,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)Util\MimeTypes.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\ParsingHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\PlatformHelper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\WindowsForegroundActivator.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)YDLWrapper\YtBinary.cs" />
     <Compile Include="..\XDM.Core\BrowserMonitoring\VideoTracker.cs" />
     <Compile Include="..\XDM.Core\IVideoTracker.cs" />
@@ -42,6 +44,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)BrowserMonitoring\IpcHttpMessageProcessor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)BrowserMonitoring\DownloadControllerProtocol.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)BrowserMonitoring\DownloadControllerApi.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)BrowserMonitoring\DownloadControllerEvents.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)BrowserMonitoring\HlsMediaProbe.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)BrowserMonitoring\HlsVariantMetadataCache.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)BrowserMonitoring\MediaDiagnostics.cs" />
@@ -204,6 +207,8 @@
     <Compile Include="$(MSBuildThisFileDirectory)YDLWrapper\Structs.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)YDLWrapper\YDLOutputParser.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)YDLWrapper\YDLProcess.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)BrowserMonitoring\YouTubeFormatCatalog.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)BrowserMonitoring\YouTubeTabExtractor.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="$(MSBuildThisFileDirectory)Translations\ReadME.txt" />

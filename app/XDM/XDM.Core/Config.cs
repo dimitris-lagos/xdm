@@ -44,6 +44,8 @@ namespace XDM.Core
         public int NotificationTimeOut { get; set; }
 
         public bool IsBrowserMonitoringEnabled { get; set; } = true;
+        public bool IsYtdlpEnabled { get; set; } = true;
+        public bool SkipCleanCompletedConfirmation { get; set; } = false;
 
         public static bool DefaultShowNotification => true;
 

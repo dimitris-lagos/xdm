@@ -115,6 +115,12 @@ test("popup does not inject server data with innerHTML", async () => {
   assert.equal(popup.includes("textContent"), true);
 });
 
+test("popup yields foreground after opening a file or folder", async () => {
+  const popup = await readFile(new URL("../popup.js", import.meta.url), "utf8");
+  assert.match(popup, /action === "open" \|\| action === "open-folder"/);
+  assert.match(popup, /window\.close\(\)/);
+});
+
 test("popup layout is compact and prevents horizontal overflow", async () => {
   const css = await readFile(new URL("../popup.css", import.meta.url), "utf8");
   assert.equal(css.includes("width: 340px"), true);

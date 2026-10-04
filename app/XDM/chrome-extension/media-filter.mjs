@@ -1,5 +1,7 @@
 export const DEFAULT_FILTERS = Object.freeze({
     extensions: [],
+    videoCodecs: [],
+    audioCodecs: [],
     videoQuality: '',
     audioQuality: '',
     minimumSizeMb: 0
@@ -36,6 +38,37 @@ function parseVideoQuality(text) {
         || firstMatch(text, /\b\d{2,5}\s*x\s*(\d{3,4})\b/i);
 }
 
+export function normalizeVideoCodec(value) {
+    const codec = String(value || '').trim().toLowerCase();
+    if (/\b(?:avc[13]|h[.\s-]?264)(?:\b|\.)/.test(codec)) return 'h264';
+    if (/\b(?:hev1|hvc1|hevc|h[.\s-]?265)(?:\b|\.)/.test(codec)) return 'hevc';
+    if (/\b(?:av01|av1)(?:\b|\.)/.test(codec)) return 'av1';
+    if (/\b(?:vp09|vp9)(?:\b|\.)/.test(codec)) return 'vp9';
+    if (/\b(?:vp08|vp8)(?:\b|\.)/.test(codec)) return 'vp8';
+    return '';
+}
+
+export function videoCodecLabel(codec) {
+    return { h264: 'H.264 (AVC)', hevc: 'H.265 (HEVC)', av1: 'AV1', vp9: 'VP9', vp8: 'VP8' }[codec] || codec;
+}
+
+export function normalizeAudioCodec(value) {
+    const codec = String(value || '').trim().toLowerCase();
+    if (/\b(?:mp4a(?:\.40)?|aac)(?:\b|\.)/.test(codec)) return 'aac';
+    if (/\b(?:ec-?3|e-ac-?3|eac3)(?:\b|\.)/.test(codec)) return 'eac3';
+    if (/\b(?:ac-?3)(?:\b|\.)/.test(codec)) return 'ac3';
+    for (const name of ['opus', 'vorbis', 'mp3', 'flac', 'alac']) {
+        if (new RegExp(`\\b${name}\\b`).test(codec)) return name;
+    }
+    if (/\bpcm(?:\b|_)/.test(codec)) return 'pcm';
+    return '';
+}
+
+export function audioCodecLabel(codec) {
+    return { aac: 'AAC', opus: 'Opus', vorbis: 'Vorbis', mp3: 'MP3', flac: 'FLAC',
+        alac: 'ALAC', ac3: 'AC-3', eac3: 'E-AC-3', pcm: 'PCM' }[codec] || codec;
+}
+
 export function normalizeMedia(item) {
     const text = String(item.text || '');
     const info = String(item.info || '');
@@ -51,11 +84,16 @@ export function normalizeMedia(item) {
     const audioOnly = /\bAUDIO\b/i.test(searchable) || AUDIO_EXTENSIONS.has(extension);
     const kind = audioOnly ? 'audio' : (VIDEO_EXTENSIONS.has(extension) || videoQuality ? 'video' : 'other');
 
+    const videoCodec = kind === 'video' ? normalizeVideoCodec(item.videoCodec || quality) : '';
+    const audioCodec = kind === 'audio' ? normalizeAudioCodec(item.audioCodec || quality) : '';
+
     return {
         ...item,
         extension,
         videoQuality,
+        videoCodec,
         audioQuality,
+        audioCodec,
         size,
         kind
     };
@@ -66,6 +104,12 @@ export function normalizeFilters(filters = {}) {
         extensions: Array.isArray(filters.extensions)
             ? [...new Set(filters.extensions.map(value => String(value).toLowerCase()).filter(Boolean))]
             : [],
+        videoCodecs: Array.isArray(filters.videoCodecs)
+            ? [...new Set(filters.videoCodecs.map(normalizeVideoCodec).filter(Boolean))]
+            : [],
+        audioCodecs: Array.isArray(filters.audioCodecs)
+            ? [...new Set(filters.audioCodecs.map(normalizeAudioCodec).filter(Boolean))]
+            : [],
         videoQuality: String(filters.videoQuality || ''),
         audioQuality: String(filters.audioQuality || ''),
         minimumSizeMb: Math.max(0, Number(filters.minimumSizeMb) || 0)
@@ -75,7 +119,9 @@ export function normalizeFilters(filters = {}) {
 export function matchesMediaFilters(media, rawFilters) {
     const filters = normalizeFilters(rawFilters);
     if (filters.extensions.length > 0 && !filters.extensions.includes(media.extension)) return false;
+    if (filters.videoCodecs.length > 0 && media.kind === 'video' && !filters.videoCodecs.includes(media.videoCodec)) return false;
     if (filters.videoQuality && media.kind === 'video' && media.videoQuality !== filters.videoQuality) return false;
+    if (filters.audioCodecs.length > 0 && media.kind === 'audio' && !filters.audioCodecs.includes(media.audioCodec)) return false;
     if (filters.audioQuality && media.kind === 'audio' && media.audioQuality !== filters.audioQuality) return false;
 
     if (filters.minimumSizeMb > 0) {
@@ -103,7 +149,9 @@ export function availableFilterOptions(items) {
     const media = items.map(normalizeMedia);
     return {
         extensions: uniqueSorted(media.map(item => item.extension)),
+        videoCodecs: uniqueSorted(media.filter(item => item.kind === 'video').map(item => item.videoCodec)),
         videoQualities: uniqueSorted(media.filter(item => item.kind === 'video').map(item => item.videoQuality)),
+        audioCodecs: uniqueSorted(media.filter(item => item.kind === 'audio').map(item => item.audioCodec)),
         audioQualities: uniqueSorted(media.filter(item => item.kind === 'audio').map(item => item.audioQuality))
     };
 }

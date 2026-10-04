@@ -1,0 +1,23 @@
+<Window x:Class="XDM.Wpf.UI.Dialogs.DeleteConfirm.CleanCompletedConfirmDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Clean Completed" Width="420" SizeToContent="Height"
+        Background="{StaticResource ControlBackcolor}" Foreground="{StaticResource ControlForecolor}"
+        ResizeMode="NoResize" WindowStartupLocation="CenterOwner" ShowInTaskbar="False">
+    <Grid Margin="18" Background="{StaticResource ControlBackcolor}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <TextBlock Name="Description" TextWrapping="Wrap"/>
+        <TextBlock Grid.Row="1" Margin="0,8,0,14" TextWrapping="Wrap"
+                   Text="Downloaded files will stay on your disk."/>
+        <CheckBox Grid.Row="2" Name="DontAskCheckbox" Content="Don't ask me again"/>
+        <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+            <Button Content="Clean Completed" Padding="12,5" Click="Clean_Click"/>
+            <Button Content="Cancel" Padding="12,5" Margin="10,0,0,0" IsCancel="True" IsDefault="True"/>
+        </StackPanel>
+    </Grid>
+</Window>

@@ -24,6 +24,11 @@ namespace XDM.Core.DataAccess
         private SQLiteCommand cmdFetchAll, cmdFetchConditional, cmdFetchOne, cmdUpdateProgress, cmdUpdateTargetDir,
             cmdInsertOne, cmdMarkFinished, cmdUpdateStatus, cmdUpdateNameAndSize, cmdUpdateNameAndFolder, cmdUpdateOne, cmdDelete;
 
+        internal T WithControllerLock<T>(Func<T> read)
+        {
+            lock (db) return read();
+        }
+
         public bool LoadDownloads(
             out List<InProgressDownloadItem> inProgressDownloads,
             out List<FinishedDownloadItem> finishedDownloads, QueryMode queryMode = QueryMode.All)
@@ -218,6 +223,7 @@ namespace XDM.Core.DataAccess
                     SetParam("@proxy_pass", entry.Proxy?.Password ?? null, cmdInsertOne.Parameters);
                     SetParam("@proxy_type", 1, cmdInsertOne.Parameters);
                     cmdInsertOne.ExecuteNonQuery();
+                    XDM.Core.BrowserMonitoring.DownloadControllerEvents.Changed?.Invoke("added", entry.Id);
                     return true;
                 }
                 catch (Exception ex)
@@ -259,6 +265,7 @@ namespace XDM.Core.DataAccess
                     SetParam("@proxy_type", 1, cmdUpdateOne.Parameters);
                     SetParam("@targetdir", entry.TargetDir, cmdUpdateOne.Parameters);
                     cmdUpdateOne.ExecuteNonQuery();
+                    XDM.Core.BrowserMonitoring.DownloadControllerEvents.Changed?.Invoke("updated", entry.Id);
                     return true;
                 }
                 catch (Exception ex)
@@ -284,6 +291,7 @@ namespace XDM.Core.DataAccess
                     //cmdUpdateProgress.Parameters["@progress"].Value = progress;
                     //cmdUpdateProgress.Parameters["@id"].Value = id;
                     cmdUpdateProgress.ExecuteNonQuery();
+                    XDM.Core.BrowserMonitoring.DownloadControllerEvents.Changed?.Invoke("progress", id);
                     return true;
                 }
                 catch (Exception ex)
@@ -309,6 +317,7 @@ namespace XDM.Core.DataAccess
                     //cmdUpdateProgress.Parameters["@targetdir"].Value = folder;
                     //cmdUpdateProgress.Parameters["@id"].Value = id;
                     cmdUpdateProgress.ExecuteNonQuery();
+                    XDM.Core.BrowserMonitoring.DownloadControllerEvents.Changed?.Invoke("progress", id);
                     return true;
                 }
                 catch (Exception ex)
@@ -346,6 +355,7 @@ namespace XDM.Core.DataAccess
                     SetParam("@id", id, cmdMarkFinished.Parameters);
                     SetParam("@completed", 1, cmdMarkFinished.Parameters);
                     cmdMarkFinished.ExecuteNonQuery();
+                    XDM.Core.BrowserMonitoring.DownloadControllerEvents.Changed?.Invoke("finished", id);
                     return true;
                 }
                 catch (Exception ex)
@@ -369,6 +379,7 @@ namespace XDM.Core.DataAccess
                     SetParam("@status", (int)status, cmdUpdateStatus.Parameters);
                     SetParam("@id", id, cmdUpdateStatus.Parameters);
                     cmdUpdateStatus.ExecuteNonQuery();
+                    XDM.Core.BrowserMonitoring.DownloadControllerEvents.Changed?.Invoke(status == DownloadStatus.Downloading ? "started" : "status", id);
                     return true;
                 }
                 catch (Exception ex)
@@ -393,6 +404,7 @@ namespace XDM.Core.DataAccess
                     SetParam("@name", name, cmdUpdateNameAndSize.Parameters);
                     SetParam("@size", size, cmdUpdateNameAndSize.Parameters);
                     cmdUpdateNameAndSize.ExecuteNonQuery();
+                    XDM.Core.BrowserMonitoring.DownloadControllerEvents.Changed?.Invoke("updated", id);
                     return true;
                 }
                 catch (Exception ex)
@@ -417,6 +429,7 @@ namespace XDM.Core.DataAccess
                     SetParam("@targetdir", folder, cmdUpdateNameAndFolder.Parameters);
                     SetParam("@id", id, cmdUpdateNameAndFolder.Parameters);
                     cmdUpdateNameAndFolder.ExecuteNonQuery();
+                    XDM.Core.BrowserMonitoring.DownloadControllerEvents.Changed?.Invoke("updated", id);
                     return true;
                 }
                 catch (Exception ex)
@@ -435,6 +448,7 @@ namespace XDM.Core.DataAccess
                 {
                     using var cmdClearAllFinished = new SQLiteCommand("DELETE FROM downloads WHERE completed=1", db);
                     cmdClearAllFinished.ExecuteNonQuery();
+                    XDM.Core.BrowserMonitoring.DownloadControllerEvents.Changed?.Invoke("removed", null);
                     return true;
                 }
                 catch (Exception ex)
@@ -457,6 +471,7 @@ namespace XDM.Core.DataAccess
                     }
                     SetParam("@id", id, cmdDelete.Parameters);
                     cmdDelete.ExecuteNonQuery();
+                    XDM.Core.BrowserMonitoring.DownloadControllerEvents.Changed?.Invoke("removed", id);
                     return true;
                 }
                 catch (Exception ex)

@@ -1,0 +1,55 @@
+{
+  "version": "9.0.2",
+  "architectures": [
+    "x86",
+    "x64"
+  ],
+  "github": {
+    "repository": "dimitris-lagos/xdm",
+    "remote": "fork",
+    "notes": "release-notes.md"
+  },
+  "media": {
+    "ffmpeg": {
+      "version": "N-127043-g5a54fcf75e-20260930",
+      "tag": "autobuild-2026-09-30-18-57"
+    },
+    "ytdlp": {
+      "version": "2026.08.19"
+    },
+    "architectures": {
+      "x86": {
+        "ffmpeg": {
+          "asset": "ffmpeg-x86.zip",
+          "sha256": "f993c742dc83911604e197ab6f460ed687a6d12a12801e758dcfa1160f0e4209",
+          "binarySha256": "665499f1c4a83a4738575affc930829a30150a0d0a98df7e91a2947f61c1af61",
+          "url": "https://github.com/yt-dlp/FFmpeg-Builds/releases/download/autobuild-2026-09-30-18-57/ffmpeg-N-127043-g5a54fcf75e-win32-gpl.zip",
+          "downloadSha256": "d3170c0ecf219f3f57297c7c31cf1d0c247faadf72b0d815df49df88b953ce70"
+        },
+        "ytdlp": {
+          "asset": "yt-dlp_x86.exe",
+          "sha256": "a8f91bd41452506bc81ebd2f369b186fea0ee7075413ba00cef9fd346a0a5d0c",
+          "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2026.08.19/yt-dlp_x86.exe"
+        }
+      },
+      "x64": {
+        "ffmpeg": {
+          "asset": "ffmpeg-x64.zip",
+          "sha256": "c6610f3000d8f465d6e7825b1046b3a134bc1ea7253afdf1ed3120dd6947a79f",
+          "binarySha256": "71d651517b3f34e4290042370277895a1570cfda43d22267ef191edfff20f65e",
+          "url": "https://github.com/yt-dlp/FFmpeg-Builds/releases/download/autobuild-2026-09-30-18-57/ffmpeg-N-127043-g5a54fcf75e-win64-gpl.zip",
+          "downloadSha256": "06ecded6224d19eba0c8597971c57ebf8e7614141b5f1adcb3b250dd0ff343c7"
+        },
+        "ytdlp": {
+          "asset": "yt-dlp.exe",
+          "sha256": "66674953fe251b89f4d08c5f0e35e0728679bd67ab3d7d05c0562af101dd3e7a",
+          "url": "https://github.com/yt-dlp/yt-dlp/releases/download/2026.08.19/yt-dlp.exe"
+        }
+      }
+    }
+  },
+  "wix": {
+    "asset": "wix.zip",
+    "sha256": "724b0ed7f8e08a823008bbf1ee54dd727b1656577989fd5490f66cc20f880f9e"
+  }
+}

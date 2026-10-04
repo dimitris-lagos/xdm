@@ -88,3 +88,67 @@ test('shows a numeric media size only once', () => {
     assert.equal(formatMediaDetails({ info: '[MP4] 1920x1080 6075 Kbps', size: 1158569 }),
         '[MP4] 1920x1080 6075 Kbps · 1.1 MiB');
 });
+
+test('normalizes YouTube codec profiles into codec families without guessing from filenames', () => {
+    for (const [reported, expected] of [
+        ['avc1.640028', 'h264'], ['H.264', 'h264'], ['hvc1.1.6.L120.90', 'hevc'],
+        ['hev1.2.4.L153.B0', 'hevc'], ['HEVC', 'hevc'], ['av01.0.08M.08', 'av1'],
+        ['AV1', 'av1'], ['vp09.00.51.08', 'vp9'], ['vp9', 'vp9'], ['vp8', 'vp8']
+    ]) {
+        assert.equal(normalizeMedia({ text: 'clip.mp4', quality: `[MP4] 1080p 30 fps ${reported}` }).videoCodec, expected);
+    }
+    assert.equal(normalizeMedia({ text: 'AV1 comparison.mp4', quality: '1080p' }).videoCodec, '');
+    assert.equal(normalizeMedia({ extension: 'm4a', quality: 'AUDIO 130 kbps mp4a.40.2' }).videoCodec, '');
+    assert.equal(normalizeMedia({ extension: 'mp4', videoCodec: 'av01.0.08M.08', quality: '1080p' }).videoCodec, 'av1');
+});
+
+test('offers only detected video codecs and merges their profiles', () => {
+    const options = availableFilterOptions([
+        { extension: 'mp4', quality: '720p avc1.4d401f' },
+        { extension: 'mp4', quality: '1080p avc1.640028' },
+        { extension: 'mkv', quality: '1080p vp9' },
+        { extension: 'mp4', quality: '1080p av01.0.08M.08' },
+        { extension: 'mp4', quality: '1080p' },
+        { extension: 'm4a', quality: 'AUDIO 128 kbps' }
+    ]);
+    assert.deepEqual(options.videoCodecs, ['av1', 'h264', 'vp9']);
+});
+
+test('combines multiple video codecs with quality and extensions while preserving audio filtering', () => {
+    const items = [
+        { id: 'avc', extension: 'mp4', quality: '1080p avc1.640028' },
+        { id: 'av1', extension: 'mp4', quality: '1080p av01.0.08M.08' },
+        { id: 'vp9', extension: 'mkv', quality: '1080p vp9' },
+        { id: 'low', extension: 'mp4', quality: '720p avc1.4d401f' },
+        { id: 'unknown', extension: 'mp4', quality: '1080p' },
+        { id: 'audio', extension: 'm4a', quality: 'AUDIO 128 kbps' }
+    ];
+    assert.deepEqual(filterMedia(items, {
+        videoCodecs: ['H.264', 'av1'], videoQuality: '1080', extensions: ['mp4', 'm4a']
+    }).map(item => item.id), ['avc', 'av1', 'audio']);
+    assert.equal(filterMedia(items, {}).length, items.length);
+});
+
+test('recognizes reported audio codec families and merges AAC profiles', () => {
+    for (const [value, expected] of [['mp4a.40.2', 'aac'], ['mp4a.40.5', 'aac'], ['opus', 'opus'],
+        ['vorbis', 'vorbis'], ['mp3', 'mp3'], ['flac', 'flac'], ['alac', 'alac'],
+        ['ac-3', 'ac3'], ['ec-3', 'eac3'], ['E-AC-3', 'eac3'], ['pcm_s16le', 'pcm']]) {
+        assert.equal(normalizeMedia({ extension: 'm4a', quality: `AUDIO 128 kbps ${value}` }).audioCodec, expected);
+    }
+    assert.equal(normalizeMedia({ text: 'Opus comparison.m4a', quality: 'AUDIO 128 kbps' }).audioCodec, '');
+});
+
+test('offers detected audio codecs and combines selections with sound quality without hiding videos', () => {
+    const items = [
+        { id: 'aac', extension: 'm4a', quality: 'AUDIO 128 kbps mp4a.40.2' },
+        { id: 'aac-low', extension: 'm4a', quality: 'AUDIO 49 kbps mp4a.40.5' },
+        { id: 'opus', extension: 'weba', quality: 'AUDIO 128 kbps opus' },
+        { id: 'vorbis', extension: 'ogg', quality: 'AUDIO 128 kbps vorbis' },
+        { id: 'unknown', extension: 'm4a', quality: 'AUDIO 128 kbps' },
+        { id: 'video', extension: 'mp4', quality: '1080p avc1.640028' }
+    ];
+    assert.deepEqual(availableFilterOptions(items).audioCodecs, ['aac', 'opus', 'vorbis']);
+    assert.deepEqual(filterMedia(items, { audioCodecs: ['aac', 'opus'], audioQuality: '128', videoCodecs: ['h264'] })
+        .map(item => item.id), ['aac', 'opus', 'video']);
+    assert.equal(filterMedia(items, {}).length, items.length);
+});

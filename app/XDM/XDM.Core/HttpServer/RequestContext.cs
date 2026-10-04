@@ -32,6 +32,21 @@ namespace XDM.Core.HttpServer
             this.KeepAlive = keepAlive;
         }
 
+        internal System.IO.Stream UpgradeWebSocket(string key)
+        {
+            KeepAlive = false;
+            tcp.SendTimeout = 5000;
+            using var sha = System.Security.Cryptography.SHA1.Create();
+            var accept = Convert.ToBase64String(sha.ComputeHash(Encoding.ASCII.GetBytes(
+                key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11")));
+            var bytes = Encoding.ASCII.GetBytes("HTTP/1.1 101 Switching Protocols\r\n" +
+                "Upgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Protocol: xdm-controller\r\n" +
+                "Sec-WebSocket-Accept: " + accept + "\r\n\r\n");
+            var stream = tcp.GetStream();
+            stream.Write(bytes, 0, bytes.Length);
+            stream.Flush();
+            return stream;
+        }
         public void SendResponse()
         {
             var io = this.tcp.GetStream();

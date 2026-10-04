@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Text;
 using System.Net;
 using System.Linq;
@@ -17,6 +17,9 @@ namespace XDM.Core.BrowserMonitoring
     {
         private NanoServer server;
         private readonly DownloadControllerApi downloadController = new();
+        private readonly YouTubeTabExtractor youTubeExtractor = new();
+        private readonly DownloadCaptureDeduplicator downloadCaptures = new();
+        private readonly System.Diagnostics.Stopwatch captureClock = System.Diagnostics.Stopwatch.StartNew();
         private static string[] blockedHeaders = { "accept", "if", "authorization", "proxy", "connection", "expect", "TE",
             "upgrade", "range", "cookie", "transfer-encoding", "content-type", "content-length","content-encoding" };
 
@@ -65,6 +68,14 @@ namespace XDM.Core.BrowserMonitoring
                     case "/media":
                         OnMediaMessage(context);
                         break;
+                    case "/ytdlp-options":
+                        var options = JsonConvert.DeserializeObject<Dictionary<string, bool>>(Encoding.UTF8.GetString(context.RequestBody!));
+                        if (options == null || !options.TryGetValue("enabled", out var enabled)) throw new ArgumentException("Missing yt-dlp option");
+                        Config.Instance.IsYtdlpEnabled = enabled;
+                        if (!enabled) youTubeExtractor.Clear();
+                        Config.SaveConfig();
+                        ApplicationContext.BroadcastConfigChange();
+                        break;
                     case "/tab-update":
                         OnTabUpdateMessage(context);
                         break;
@@ -72,6 +83,7 @@ namespace XDM.Core.BrowserMonitoring
                         OnVideoDownloadMessage(context);
                         break;
                     case "/clear":
+                        youTubeExtractor.Clear();
                         ApplicationContext.VideoTracker.ClearVideoList();
                         break;
                     case "/link":
@@ -133,7 +145,8 @@ namespace XDM.Core.BrowserMonitoring
             {
                 return;
             }
-            ApplicationContext.VideoTracker.UpdateMediaTitle(msg.TabUrl, msg.TabTitle);
+            if (!string.IsNullOrEmpty(msg.TabTitle)) ApplicationContext.VideoTracker.UpdateMediaTitle(msg.TabUrl, msg.TabTitle);
+            youTubeExtractor.Update(msg);
         }
 
         private void OnDownloadMessage(RequestContext context)
@@ -141,6 +154,16 @@ namespace XDM.Core.BrowserMonitoring
             var msg = JsonConvert.DeserializeObject<ExtensionData>(Encoding.UTF8.GetString(context.RequestBody!));
             if (msg == null)
             {
+                return;
+            }
+            // Identify browser events; briefly suppress identical legacy captures.
+            var captureKey = string.IsNullOrEmpty(msg.CaptureId)
+                ? "legacy:" + Encoding.UTF8.GetString(context.RequestBody!)
+                : "capture:" + msg.CaptureId + ":" + msg.Url;
+            var lifetime = string.IsNullOrEmpty(msg.CaptureId) ? 5000L : 600000L;
+            if (!downloadCaptures.TryAccept(captureKey, captureClock.ElapsedMilliseconds, lifetime))
+            {
+                Log.Debug("Ignoring duplicate browser download capture");
                 return;
             }
             var dmsg = new Message();
@@ -309,6 +332,9 @@ namespace XDM.Core.BrowserMonitoring
 
                 writer.WritePropertyName("enabled");
                 writer.WriteValue(Config.Instance.IsBrowserMonitoringEnabled);
+
+                writer.WritePropertyName("ytdlpEnabled");
+                writer.WriteValue(Config.Instance.IsYtdlpEnabled);
 
                 writer.WritePropertyName("fileExts");
                 writer.WriteStartArray();

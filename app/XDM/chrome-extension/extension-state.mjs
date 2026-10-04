@@ -22,6 +22,7 @@ export class ExtensionStateStore {
         this.connection = CONNECTION_STATUS.CONNECTING;
         this.appEnabled = false;
         this.userDisabled = false;
+        this.ytdlpEnabled = true;
         this.videoList = [];
         this.videoListSignature = mediaSignature(this.videoList);
         this.mediaRevision = 0;
@@ -48,15 +49,24 @@ export class ExtensionStateStore {
         return true;
     }
 
+    setYtdlpEnabled(enabled) {
+        if (this.ytdlpEnabled === enabled) return false;
+        this.ytdlpEnabled = enabled;
+        this.emit();
+        return true;
+    }
+
     applySync(payload = {}) {
         const nextList = Array.isArray(payload.videoList) ? payload.videoList : [];
         const nextSignature = mediaSignature(nextList);
         const nextAppEnabled = payload.enabled === true;
-        const changed = this.appEnabled !== nextAppEnabled
+        const nextYtdlpEnabled = payload.ytdlpEnabled !== false;
+        const changed = this.ytdlpEnabled !== nextYtdlpEnabled || this.appEnabled !== nextAppEnabled
             || this.videoListSignature !== nextSignature
             || this.connection !== CONNECTION_STATUS.CONNECTED;
 
         this.appEnabled = nextAppEnabled;
+        this.ytdlpEnabled = nextYtdlpEnabled;
         if (this.videoListSignature !== nextSignature) {
             this.videoList = nextList;
             this.videoListSignature = nextSignature;
@@ -76,6 +86,7 @@ export class ExtensionStateStore {
             connected,
             appEnabled: this.appEnabled,
             userEnabled: !this.userDisabled,
+            ytdlpEnabled: this.ytdlpEnabled,
             monitoringEnabled: connected && this.appEnabled && !this.userDisabled,
             list: this.videoList
         };

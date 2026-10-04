@@ -1,5 +1,6 @@
 "use strict";
 import Logger from './logger.js';
+import { youtubeVideoUrl } from './youtube.mjs';
 import RequestWatcher from './request-watcher.js';
 import Connector from './connector.js';
 import { DEFAULT_FILTERS, filterMedia, normalizeFilters } from './media-filter.mjs';
@@ -12,8 +13,11 @@ export default class App {
         this.fileExts = [];
         this.requestWatcher = new RequestWatcher(this.onRequestDataReceived.bind(this));
         this.tabsWatcher = [];
+        this.youtubeTabs = new Map();
+        this.lastYoutubeScan = 0;
         this.stateStore = new ExtensionStateStore();
         this.popupPorts = new Set();
+        this.capturedDownloads = new Set();
         this.onDownloadCreatedCallback = this.onDownloadCreated.bind(this);
         this.onDeterminingFilenameCallback = this.onDeterminingFilename.bind(this);
         this.onTabUpdateCallback = this.onTabUpdate.bind(this);
@@ -64,17 +68,28 @@ export default class App {
             mediaTypes: msg.mediaTypes
         });
         this.stateStore.applySync(msg);
+        if (!this.isYtdlpEnabled()) { this.youtubeTabs.clear(); this.lastYoutubeScan = 0; }
+        if (this.isYtdlpEnabled() && this.isMonitoringEnabled() && Date.now() - this.lastYoutubeScan > 60000) {
+            this.lastYoutubeScan = Date.now();
+            chrome.tabs.query({}, tabs => tabs.forEach(tab => {
+                if (youtubeVideoUrl(tab.url)) this.onTabUpdate(tab.id, { status: 'complete' }, tab);
+            }));
+        }
     }
 
     onDisconnect() {
         this.logger.log("Disconnected from native host!");
         this.logger.log("Disconnected...");
         this.stateStore.setConnection(CONNECTION_STATUS.DISCONNECTED);
+        this.youtubeTabs.clear();
+        this.lastYoutubeScan = 0;
     }
 
     isMonitoringEnabled() {
         return this.stateStore.snapshot().monitoringEnabled;
     }
+
+    isYtdlpEnabled() { return this.stateStore.snapshot().ytdlpEnabled !== false; }
 
     onRequestDataReceived(data) {
         //Streaming video data received, send to native messaging application
@@ -96,6 +111,10 @@ export default class App {
         let url = download.finalUrl || download.url;
         this.logger.log(url);
         if (this.isMonitoringEnabled() && this.shouldTakeOver(url, download.filename)) {
+            const captureId = download.id + ':' + download.startTime;
+            if (this.capturedDownloads.has(captureId)) return;
+            this.capturedDownloads.add(captureId);
+            if (this.capturedDownloads.size > 1024) this.capturedDownloads.delete(this.capturedDownloads.values().next().value);
             chrome.downloads.cancel(
                 download.id,
                 () => chrome.downloads.erase({ id: download.id })
@@ -105,7 +124,7 @@ export default class App {
                 referrer = download.url;
             }
             this.triggerDownload(url, download.filename,
-                referrer, download.fileSize, download.mime);
+                referrer, download.fileSize, download.mime, captureId);
         }
     }
 
@@ -115,25 +134,22 @@ export default class App {
     }
 
     onTabUpdate(tabId, changeInfo, tab) {
-        if (!this.isMonitoringEnabled()) {
-            return;
+        if (!this.isYtdlpEnabled() || !this.isMonitoringEnabled() || !this.connector.isConnected()) return;
+        const videoUrl = youtubeVideoUrl(tab.url);
+        const previous = this.youtubeTabs.get(tabId);
+        if (videoUrl) {
+            // Title, URL and completed-navigation events may describe the same video.
+            if (previous?.url === videoUrl && Date.now() - previous.time < 60000) return;
+            this.youtubeTabs.set(tabId, { url: videoUrl, time: Date.now() });
+        } else {
+            this.youtubeTabs.delete(tabId);
+            const watchedTitle = changeInfo.title && this.tabsWatcher?.some(t => tab.url?.includes(t));
+            if (!previous && !watchedTitle) return;
         }
-        if (changeInfo.title) {
-            if (this.tabsWatcher &&
-                this.tabsWatcher.find(t => tab.url.indexOf(t) > 0)) {
-                this.logger.log("Tab changed: " + changeInfo.title + " => " + tab.url);
-                try {
-                    this.connector.postMessage("/tab-update", {
-                        tabUrl: tab.url,
-                        tabTitle: changeInfo.title
-                    });
-                } catch (ex) {
-                    console.log(ex);
-                }
-            }
-        }
+        this.connector.postMessage('/tab-update', {
+            tabId: String(tabId), tabUrl: tab.url || '', tabTitle: tab.title || ''
+        }).catch(() => this.youtubeTabs.delete(tabId));
     }
-
     register() {
         chrome.downloads.onCreated.addListener(
             this.onDownloadCreatedCallback
@@ -144,6 +160,10 @@ export default class App {
         chrome.tabs.onUpdated.addListener(
             this.onTabUpdateCallback
         );
+        chrome.tabs.onRemoved.addListener(tabId => {
+            if (!this.youtubeTabs.delete(tabId) || !this.connector.isConnected()) return;
+            this.connector.postMessage('/tab-update', { tabId: String(tabId), tabUrl: '' }).catch(() => {});
+        });
         chrome.runtime.onMessage.addListener(this.onPopupMessage.bind(this));
         chrome.runtime.onConnect.addListener(this.onPopupConnected.bind(this));
         this.requestWatcher.register();
@@ -213,7 +233,7 @@ export default class App {
         }
     }
 
-    triggerDownload(url, file, referer, size, mime) {
+    triggerDownload(url, file, referer, size, mime, captureId) {
         chrome.cookies.getAll({ "url": url }, cookies => {
             let cookieStr = undefined;
             if (cookies) {
@@ -242,6 +262,7 @@ export default class App {
                 fileSize: size,
                 mimeType: mime
             };
+            if (captureId) data.captureId = captureId;
             this.logger.log(data);
             this.connector.postMessage("/download", data);
         });
@@ -259,10 +280,27 @@ export default class App {
         else if (request.type === "cmd") {
             this.logger.log("request.enabled:" + request.enabled);
             this.stateStore.setUserEnabled(request.enabled === true);
+            this.lastYoutubeScan = 0;
+            if (!request.enabled && this.connector.isConnected()) {
+                this.youtubeTabs.forEach((_, tabId) => {
+                    this.connector.postMessage('/tab-update', { tabId: String(tabId), tabUrl: '' }).catch(() => {});
+                });
+            }
+            this.youtubeTabs.clear();
+            if (request.enabled && this.connector.isConnected()) this.connector.refresh().catch(() => {});
             if (request.enabled && !this.connector.isConnected()) {
                 this.connector.refresh().catch(() => this.connector.launchApp());
             }
             sendResponse(this.stateStore.snapshot());
+        }
+        else if (request.type === "ytdlp-cmd") {
+            this.stateStore.setYtdlpEnabled(request.enabled === true);
+            this.youtubeTabs.clear();
+            this.lastYoutubeScan = 0;
+            this.connector.postMessage("/ytdlp-options", { enabled: request.enabled === true })
+                .then(() => sendResponse(this.stateStore.snapshot()))
+                .catch(() => sendResponse(this.stateStore.snapshot()));
+            return true;
         }
         else if (request.type === "vid") {
             let vid = request.itemId;
@@ -273,7 +311,9 @@ export default class App {
             return true;
         }
         else if (request.type === "clear") {
-            this.connector.postMessage("/clear", {});
+            this.youtubeTabs.clear();
+            this.lastYoutubeScan = 0;
+            this.connector.postMessage("/clear", {}).catch(() => {});
         }
     }
 

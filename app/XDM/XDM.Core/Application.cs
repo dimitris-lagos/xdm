@@ -515,8 +515,13 @@ namespace XDM.Core
 
             ApplicationContext.MainWindow.ClearAllFinishedClicked += (s, e) =>
             {
+                if (!AppDB.Instance.Downloads.RemoveAllFinished())
+                {
+                    ShowMessageBox(ApplicationContext.MainWindow, "Could not clear completed downloads. Please try again.");
+                    return;
+                }
                 ApplicationContext.MainWindow.DeleteAllFinishedDownloads();
-                AppDB.Instance.Downloads.RemoveAllFinished();
+                UpdateToolbarButtonState();
                 //SaveFinishedList();
             };
 

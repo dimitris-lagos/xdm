@@ -42,8 +42,9 @@ namespace XDM.WinForms.IntegrationUI
         {
             Text = $"XDM 9 · Extensions for {browser.Name}";
             StartPosition = FormStartPosition.CenterScreen;
-            MinimumSize = new Size(720, 540);
-            ClientSize = new Size(760, 570);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
+            ClientSize = new Size(760, 720);
             BackColor = WindowColor;
             ForeColor = TextColor;
             Font = new Font("Segoe UI", 9F);
@@ -58,7 +59,7 @@ namespace XDM.WinForms.IntegrationUI
                 Dock = DockStyle.Fill,
                 Padding = new Padding(24),
                 ColumnCount = 1,
-                RowCount = 6,
+                RowCount = 7,
                 AutoScroll = true
             };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
@@ -67,13 +68,15 @@ namespace XDM.WinForms.IntegrationUI
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
-            layout.Controls.Add(CreateLabel("Install XDM browser extensions", 18F, FontStyle.Bold, TextColor), 0, 0);
+            layout.Controls.Add(BuildDenoPrerequisite(), 0, 0);
+            layout.Controls.Add(CreateLabel("Install XDM browser extensions", 18F, FontStyle.Bold, TextColor), 0, 1);
             layout.Controls.Add(CreateLabel(
                 $"{browser.Name}: enable Developer mode, then use Load unpacked once for each folder below.",
-                10F, FontStyle.Regular, MutedColor), 0, 1);
-            layout.Controls.Add(BuildBrowserRow(), 0, 2);
+                10F, FontStyle.Regular, MutedColor), 0, 2);
+            layout.Controls.Add(BuildBrowserRow(), 0, 3);
 
             var cards = new FlowLayoutPanel
             {
@@ -84,16 +87,44 @@ namespace XDM.WinForms.IntegrationUI
                 Margin = new Padding(0, 14, 0, 0)
             };
             foreach (var extension in extensions) cards.Controls.Add(BuildExtensionCard(extension));
-            layout.Controls.Add(cards, 0, 3);
+            layout.Controls.Add(cards, 0, 4);
 
             layout.Controls.Add(CreateLabel(
                 "Both extensions are independent. Install both folders and pin both toolbar icons. " +
                 "The Integration Module is blue; the Download Controller is purple.",
-                9F, FontStyle.Regular, MutedColor), 0, 4);
+                9F, FontStyle.Regular, MutedColor), 0, 5);
 
             return layout;
         }
 
+        private Control BuildDenoPrerequisite()
+        {
+            var panel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top, AutoSize = true,
+                FlowDirection = FlowDirection.TopDown, WrapContents = false,
+                BackColor = PanelColor, Padding = new Padding(14),
+                Margin = new Padding(0, 0, 0, 18)
+            };
+            panel.Controls.Add(CreateLabel("First: install Deno for YouTube downloads", 12F, FontStyle.Bold, TextColor));
+            panel.Controls.Add(CreateLabel(
+                "yt-dlp needs Deno 2.3.0 or newer for full YouTube support. " +
+                "Install Deno, add it to PATH and restart XDM. Regular file downloads do not require Deno.",
+                9F, FontStyle.Regular, MutedColor));
+            var link = new LinkLabel
+            {
+                AutoSize = true, Text = "Deno official repository and downloads",
+                LinkColor = Color.FromArgb(125, 190, 255),
+                ActiveLinkColor = TextColor, VisitedLinkColor = Color.FromArgb(125, 190, 255),
+                Margin = new Padding(0, 4, 0, 0)
+            };
+            link.LinkClicked += (_, __) => Process.Start(new ProcessStartInfo
+            {
+                FileName = "https://github.com/denoland/deno", UseShellExecute = true
+            });
+            panel.Controls.Add(link);
+            return panel;
+        }
         private Control BuildBrowserRow()
         {
             var row = new TableLayoutPanel

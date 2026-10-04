@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -196,15 +196,15 @@ namespace XDM.Core.MediaProcessor
         {
             var executableNames =
                 Environment.OSVersion.Platform == PlatformID.Win32NT ?
-                new string[] { "ffmpeg-x86.exe", "ffmpeg.exe" } : new string[] { "ffmpeg" };
+                (new string[] { "ffmpeg.exe", "ffmpeg-x86.exe" }) : new string[] { "ffmpeg" };
             foreach (var executableName in executableNames)
             {
-                var path = Path.Combine(Config.AppDir, executableName);
+                var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, executableName);
                 if (File.Exists(path))
                 {
                     return path;
                 }
-                path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, executableName);
+                path = Path.Combine(Config.AppDir, executableName);
                 if (File.Exists(path))
                 {
                     return path;

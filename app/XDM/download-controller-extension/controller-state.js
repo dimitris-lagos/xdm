@@ -32,7 +32,7 @@ export function transitionActivity(summary, previousState, event = "poll") {
     return { state, toolbar: { mode: "active", badgeText: String(summary.activeCount), pulseOn: state.pulseOn } };
   }
 
-  if (state.hadActiveDownloads && summary.allFinished) {
+  if (event === "download-finished" || (state.hadActiveDownloads && summary.allFinished)) {
     state.hadActiveDownloads = false;
     state.completionPending = true;
   }

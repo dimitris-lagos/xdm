@@ -124,13 +124,14 @@ namespace XDM.Core.Util
                 switch (os)
                 {
                     case PlatformID.Win32NT:
+                        var activation = WindowsForegroundActivator.CaptureForFile(path);
                         var psiShellEx = new ProcessStartInfo
                         {
                             FileName = path,
                             UseShellExecute = true
                         };
                         Log.Debug($"Shell execute: {path}");
-                        Process.Start(psiShellEx);
+                        activation.ActivateWhenReady(Process.Start(psiShellEx));
                         return true;
 #if NET5_0_OR_GREATER
                     case PlatformID.Unix:
@@ -165,13 +166,15 @@ namespace XDM.Core.Util
                         {
                             case PlatformID.Win32NT:
                                 {
+                                    var selectedPath = Path.Combine(path, file);
+                                    var activation = WindowsForegroundActivator.CaptureForFolder(path);
                                     var psi = new ProcessStartInfo
                                     {
                                         FileName = "explorer",
                                     };
-                                    psi.Arguments = $"/select, \"{Path.Combine(path, file)}\"";
+                                    psi.Arguments = $"/select, \"{selectedPath}\"";
                                     Log.Debug($"{psi.FileName} {psi.Arguments}");
-                                    Process.Start(psi);
+                                    activation.ActivateWhenReady(Process.Start(psi));
                                     return true;
                                 }
 #if NET5_0_OR_GREATER

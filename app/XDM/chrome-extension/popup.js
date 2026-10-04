@@ -3,7 +3,9 @@ import {
     availableFilterOptions,
     filterMedia,
     formatMediaDetails,
-    normalizeFilters
+    normalizeFilters,
+    videoCodecLabel,
+    audioCodecLabel
 } from './media-filter.mjs';
 
 class VideoPopup {
@@ -26,6 +28,9 @@ class VideoPopup {
         this.filterButton = document.getElementById('filters');
         this.filterPanel = document.getElementById('filter-panel');
         this.monitoringToggle = document.getElementById('chk');
+        this.ytdlpToggle = document.getElementById('ytdlp-toggle');
+        this.ytdlpLabel = document.getElementById('ytdlp-label');
+        this.ytdlpDescription = document.getElementById('ytdlp-description');
         this.monitoringStatus = document.getElementById('monitoring-status');
         this.monitoringLabel = document.getElementById('monitoring-label');
         this.downloadCheckedButton = document.getElementById('download-checked');
@@ -44,6 +49,14 @@ class VideoPopup {
             const enabled = this.monitoringToggle.checked;
             this.monitoringToggle.disabled = true;
             chrome.runtime.sendMessage({ type: 'cmd', enabled }, state => this.queueState(state));
+        });
+
+        this.ytdlpToggle.addEventListener('change', () => {
+            this.ytdlpToggle.disabled = true;
+            chrome.runtime.sendMessage({ type: 'ytdlp-cmd', enabled: this.ytdlpToggle.checked }, state => {
+                this.queueState(state);
+                this.ytdlpToggle.disabled = !this.connected;
+            });
         });
 
         this.downloadCheckedButton.addEventListener('click', () => this.downloadSelected());
@@ -107,6 +120,10 @@ class VideoPopup {
         this.monitoringToggle.checked = state.monitoringEnabled === true;
         this.monitoringToggle.disabled = !this.connected || state.appEnabled !== true;
         this.updateMonitoringState(state);
+        if (typeof state.ytdlpEnabled === "boolean") this.ytdlpToggle.checked = state.ytdlpEnabled;
+        this.ytdlpToggle.disabled = !this.connected;
+        this.ytdlpLabel.textContent = this.ytdlpToggle.checked ? "On" : "Off";
+        this.ytdlpDescription.textContent = this.ytdlpToggle.checked ? "Automatically find YouTube video formats" : "Automatic extraction stopped — no background yt-dlp";
 
         const mediaChanged = this.lastMediaRevision !== state.mediaRevision;
         if (mediaChanged) {
@@ -114,6 +131,8 @@ class VideoPopup {
             this.allItems = Array.isArray(state.list) ? state.list : [];
             this.reconcileFiltersWithAvailableMedia();
             this.renderExtensionFilters();
+            this.renderCodecFilters();
+            this.renderAudioCodecFilters();
             this.renderQualityFilters();
             this.syncFilterControls();
             this.persistFilters();
@@ -167,10 +186,52 @@ class VideoPopup {
         });
     }
 
+    renderCodecFilters() {
+        const container = document.getElementById('codec-filters');
+        container.replaceChildren();
+        const codecs = availableFilterOptions(this.allItems).videoCodecs;
+        codecs.forEach(codec => {
+            const label = document.createElement('label');
+            label.className = 'filter-chip';
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.value = codec;
+            input.checked = this.filters.videoCodecs.includes(codec);
+            input.addEventListener('change', () => this.readAndApplyFilters());
+            const text = document.createElement('span');
+            text.textContent = videoCodecLabel(codec);
+            label.append(input, text);
+            container.appendChild(label);
+        });
+        if (codecs.length === 0) container.textContent = 'No video codecs reported';
+    }
+
+    renderAudioCodecFilters() {
+        const container = document.getElementById('audio-codec-filters');
+        container.replaceChildren();
+        const codecs = availableFilterOptions(this.allItems).audioCodecs;
+        codecs.forEach(codec => {
+            const label = document.createElement('label');
+            label.className = 'filter-chip';
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.value = codec;
+            input.checked = this.filters.audioCodecs.includes(codec);
+            input.addEventListener('change', () => this.readAndApplyFilters());
+            const text = document.createElement('span');
+            text.textContent = audioCodecLabel(codec);
+            label.append(input, text);
+            container.appendChild(label);
+        });
+        if (codecs.length === 0) container.textContent = 'No audio codecs reported';
+    }
+
     reconcileFiltersWithAvailableMedia() {
         const options = availableFilterOptions(this.allItems);
         this.filters = normalizeFilters({
             extensions: this.filters.extensions.filter(value => options.extensions.includes(value)),
+            videoCodecs: this.filters.videoCodecs.filter(value => options.videoCodecs.includes(value)),
+            audioCodecs: this.filters.audioCodecs.filter(value => options.audioCodecs.includes(value)),
             videoQuality: options.videoQualities.includes(this.filters.videoQuality) ? this.filters.videoQuality : '',
             audioQuality: options.audioQualities.includes(this.filters.audioQuality) ? this.filters.audioQuality : '',
             minimumSizeMb: this.filters.minimumSizeMb
@@ -189,6 +250,12 @@ class VideoPopup {
     }
 
     syncFilterControls() {
+        document.querySelectorAll('#codec-filters input').forEach(input => {
+            input.checked = this.filters.videoCodecs.includes(input.value);
+        });
+        document.querySelectorAll('#audio-codec-filters input').forEach(input => {
+            input.checked = this.filters.audioCodecs.includes(input.value);
+        });
         this.videoQuality.value = this.filters.videoQuality;
         this.audioQuality.value = this.filters.audioQuality;
         this.minimumSize.value = String(this.filters.minimumSizeMb);
@@ -202,6 +269,8 @@ class VideoPopup {
             .map(input => input.value);
         this.filters = normalizeFilters({
             extensions,
+            videoCodecs: Array.from(document.querySelectorAll('#codec-filters input:checked')).map(input => input.value),
+            audioCodecs: Array.from(document.querySelectorAll('#audio-codec-filters input:checked')).map(input => input.value),
             videoQuality: this.videoQuality.value,
             audioQuality: this.audioQuality.value,
             minimumSizeMb: this.minimumSize.value
@@ -223,6 +292,8 @@ class VideoPopup {
     updateFilterResult(visibleCount) {
         const total = this.allItems.length;
         const active = this.filters.extensions.length > 0
+            || this.filters.videoCodecs.length > 0
+            || this.filters.audioCodecs.length > 0
             || this.filters.videoQuality
             || this.filters.audioQuality
             || this.filters.minimumSizeMb > 0;

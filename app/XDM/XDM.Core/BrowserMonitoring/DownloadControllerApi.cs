@@ -16,6 +16,119 @@ namespace XDM.Core.BrowserMonitoring
         private const string ClientHeader = "X-XDM-Controller-Client";
         private readonly string sessionToken = CreateSessionToken();
 
+        private readonly Dictionary<string, DateTime> lastProgressEvent = new();
+        internal DownloadControllerApi()
+        {
+            DownloadControllerEvents.Changed = (kind, id) =>
+            {
+                try
+                {
+                    if (kind == "progress" && id != null)
+                    {
+                        var now = DateTime.UtcNow;
+                        if (lastProgressEvent.TryGetValue(id, out var last) && (now - last).TotalMilliseconds < 250) return;
+                        lastProgressEvent[id] = now;
+                    }
+                    else if (id != null) lastProgressEvent.Remove(id);
+                    var downloads = id == null ? CreateSnapshot() : CreateSingleSnapshot(id);
+                    DownloadControllerEvents.Publish(sequence => JsonConvert.SerializeObject(new {
+                        type = "downloads", kind, id, delta = id != null, epoch = DownloadControllerEvents.Epoch, sequence, downloads
+                    }));
+                }
+                catch (Exception ex) { TraceLog.Log.Debug(ex, "Controller event"); }
+            };
+        }
+
+        private static readonly System.Threading.SemaphoreSlim eventClients = new(4);
+
+        private void HandleEvents(RequestContext context)
+        {
+            var origin = GetHeader(context, "Origin");
+            var protocols = (GetHeader(context, "Sec-WebSocket-Protocol") ?? "").Split(',')
+                .Select(value => value.Trim()).ToArray();
+            if (!DownloadControllerProtocol.IsOriginAllowed(origin)
+                || protocols.Length != 2 || protocols[0] != "xdm-controller"
+                || !DownloadControllerProtocol.TokenMatches(sessionToken, protocols[1]))
+            {
+                SendError(context, 403, "Forbidden", "Invalid event channel credentials");
+                return;
+            }
+            var key = GetHeader(context, "Sec-WebSocket-Key");
+            if (context.RequestMethod != "GET" || GetHeader(context, "Sec-WebSocket-Version") != "13"
+                || !String.Equals(GetHeader(context, "Upgrade"), "websocket", StringComparison.OrdinalIgnoreCase)
+                || !(GetHeader(context, "Connection") ?? "").Split(',').Any(v => v.Trim().Equals("Upgrade", StringComparison.OrdinalIgnoreCase))
+                || !ValidWebSocketKey(key))
+            {
+                SendError(context, 400, "Bad Request", "Invalid WebSocket handshake");
+                return;
+            }
+            if (!eventClients.Wait(0))
+            {
+                SendError(context, 503, "Service Unavailable", "Too many event clients");
+                return;
+            }
+            try
+            {
+                var uri = new Uri("http://localhost" + context.RequestPath);
+                var parts = uri.Query.TrimStart('?').Split('&');
+                var epoch = parts.FirstOrDefault(p => p.StartsWith("epoch="))?.Substring(6);
+                var cursorValue = parts.FirstOrDefault(p => p.StartsWith("after="))?.Substring(6);
+                var cursor = Int64.TryParse(cursorValue, out var parsed) && parsed >= 0 ? parsed : -1;
+                using var stream = context.UpgradeWebSocket(key!);
+                using var closed = new System.Threading.CancellationTokenSource();
+                var reader = new System.Threading.Thread(() => DownloadControllerEvents.ReadControls(stream, closed)) { IsBackground = true };
+                reader.Start();
+                try
+                {
+                    if (epoch != DownloadControllerEvents.Epoch || cursor < 0
+                        || DownloadControllerEvents.Read(cursor, false) == null)
+                        SendSnapshot(stream, out cursor);
+                    while (!closed.IsCancellationRequested)
+                    {
+                        var entries = DownloadControllerEvents.Read(cursor, true, closed.Token);
+                        if (closed.IsCancellationRequested) break;
+                        if (entries == null) { SendSnapshot(stream, out cursor); continue; }
+                        if (entries.Length == 0)
+                            DownloadControllerEvents.WriteText(stream, "{\"type\":\"heartbeat\"}");
+                        foreach (var entry in entries)
+                        {
+                            DownloadControllerEvents.WriteText(stream, entry.Json);
+                            cursor = entry.Sequence;
+                        }
+                    }
+                }
+                finally
+                {
+                    closed.Cancel();
+                    stream.Dispose();
+                    reader.Join(1000);
+                }
+            }
+            catch (Exception ex) { TraceLog.Log.Debug(ex, "Controller event connection closed"); }
+            finally { eventClients.Release(); }
+        }
+
+        private static bool ValidWebSocketKey(string? key)
+        {
+            try { return key != null && Convert.FromBase64String(key).Length == 16; }
+            catch (FormatException) { return false; }
+        }
+
+        private static void SendSnapshot(System.IO.Stream stream, out long cursor)
+        {
+            long position = 0;
+            var json = AppDB.Instance.Downloads.WithControllerLock(() => {
+                var downloads = CreateSnapshot();
+                position = DownloadControllerEvents.Sequence;
+                return JsonConvert.SerializeObject(new {
+                    type = "downloads", kind = "snapshot", epoch = DownloadControllerEvents.Epoch,
+                    sequence = position, downloads
+                });
+            });
+            DownloadControllerEvents.WriteText(stream, json);
+            cursor = position;
+        }
+
         internal bool TryHandle(RequestContext context)
         {
             if (!context.RequestPath.StartsWith("/controller/v1/", StringComparison.Ordinal)) return false;
@@ -30,6 +143,12 @@ namespace XDM.Core.BrowserMonitoring
                 }
                 AddCorsHeaders(context);
                 HandlePreflight(context);
+                return true;
+            }
+
+            if (context.RequestPath == "/controller/v1/events" || context.RequestPath.StartsWith("/controller/v1/events?", StringComparison.Ordinal))
+            {
+                HandleEvents(context);
                 return true;
             }
 
@@ -82,47 +201,34 @@ namespace XDM.Core.BrowserMonitoring
 
         private static List<ControllerDownloadDto> CreateSnapshot()
         {
-            var result = new List<ControllerDownloadDto>();
             if (!AppDB.Instance.Downloads.LoadDownloads(out var inProgress, out var finished))
-            {
                 throw new InvalidOperationException("Could not read the download store");
-            }
-
-            foreach (var item in inProgress.OrderByDescending(item => item.DateAdded))
-            {
-                var state = item.Status.ToString();
-                DownloadControllerRuntimeState.TryGet(item.Id, out var metrics);
-                result.Add(new ControllerDownloadDto
-                {
-                    id = item.Id,
-                    name = item.Name,
-                    dateAdded = item.DateAdded,
-                    progress = item.Progress,
-                    state = state,
-                    totalBytes = item.Size > 0 ? item.Size : (long?)null,
-                    downloadedBytes = item.Size > 0 ? item.Size * item.Progress / 100 : (long?)null,
-                    speed = metrics?.Speed,
-                    eta = metrics?.Eta,
-                    actions = DownloadControllerProtocol.ActionsForState(state)
-                });
-            }
-            foreach (var item in finished.OrderByDescending(item => item.DateAdded))
-            {
-                result.Add(new ControllerDownloadDto
-                {
-                    id = item.Id,
-                    name = item.Name,
-                    dateAdded = item.DateAdded,
-                    progress = 100,
-                    state = "Finished",
-                    totalBytes = item.Size > 0 ? item.Size : (long?)null,
-                    downloadedBytes = item.Size > 0 ? item.Size : (long?)null,
-                    actions = DownloadControllerProtocol.ActionsForState("Finished")
-                });
-            }
-            return result;
+            return inProgress.Cast<DownloadItemBase>().Concat(finished)
+                .OrderByDescending(item => item.DateAdded).Select(CreateDto).ToList();
         }
 
+        private static List<ControllerDownloadDto> CreateSingleSnapshot(string id)
+        {
+            var item = AppDB.Instance.Downloads.GetDownloadById(id);
+            return item == null ? new List<ControllerDownloadDto>() : new List<ControllerDownloadDto> { CreateDto(item) };
+        }
+
+        private static ControllerDownloadDto CreateDto(DownloadItemBase item)
+        {
+            var active = item as InProgressDownloadItem;
+            var state = active?.Status.ToString() ?? "Finished";
+            var progress = active?.Progress ?? 100;
+            DownloadControllerRuntimeState.TryGet(item.Id, out var metrics);
+            return new ControllerDownloadDto {
+                id = item.Id, name = item.Name, dateAdded = item.DateAdded,
+                progress = progress, state = state,
+                totalBytes = item.Size > 0 ? item.Size : (long?)null,
+                downloadedBytes = item.Size > 0 ? item.Size * progress / 100 : (long?)null,
+                speed = active != null ? metrics?.Speed : null,
+                eta = active != null ? metrics?.Eta : null,
+                actions = DownloadControllerProtocol.ActionsForState(state)
+            };
+        }
         private static ControllerActionResult PerformAction(string id, string action)
         {
             var entry = AppDB.Instance.Downloads.GetDownloadById(id);

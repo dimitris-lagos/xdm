@@ -348,11 +348,6 @@ namespace XDM.Wpf.UI
 
         public void DeleteAllFinishedDownloads()
         {
-            if (MessageBox.Show(this, TextResource.GetText("MENU_DELETE_COMPLETED"), "XDM", MessageBoxButton.YesNo)
-                != MessageBoxResult.Yes)
-            {
-                return;
-            }
             finishedList.Clear();
         }
 
@@ -525,6 +520,17 @@ namespace XDM.Wpf.UI
 
         private void menuClearFinished_Click(object sender, RoutedEventArgs e)
         {
+            if (finishedList.Count == 0) return;
+            if (!Config.Instance.SkipCleanCompletedConfirmation)
+            {
+                var dialog = new CleanCompletedConfirmDialog(finishedList.Count) { Owner = this };
+                if (dialog.ShowDialog() != true) return;
+                if (dialog.DontAskAgain)
+                {
+                    Config.Instance.SkipCleanCompletedConfirmation = true;
+                    Config.SaveConfig();
+                }
+            }
             this.ClearAllFinishedClicked?.Invoke(sender, e);
         }
 

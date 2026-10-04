@@ -10,6 +10,7 @@ const showAllInput = document.querySelector("#show-all");
 const scopeDescription = document.querySelector("#scope-description");
 const scopeLabel = document.querySelector("#scope-label");
 let allDownloads = [];
+let snapshotVersion = 0;
 let sessionStartedAt = Date.now();
 let showAllDownloads = false;
 
@@ -52,6 +53,10 @@ function render(downloads) {
         for (const item of actions.querySelectorAll("button")) item.disabled = true;
         try {
           await runAction(download.id, action);
+          if (action === "open" || action === "open-folder") {
+            window.close();
+            return;
+          }
           chrome.runtime.sendMessage({ type: "downloads-changed" });
           await refresh();
         } catch (error) {
@@ -77,13 +82,17 @@ function setConnection(online, message = "") {
 }
 
 async function refresh() {
+  const version = snapshotVersion;
   try {
-    allDownloads = await getDownloads();
+    const snapshot = await getDownloads();
+    if (version !== snapshotVersion) return;
+    allDownloads = snapshot;
     const downloads = filterDownloads(allDownloads, showAllDownloads, sessionStartedAt);
     render(downloads);
     const scope = showAllDownloads ? "all" : "session";
     setConnection(true, `${downloads.length} ${scope}`);
   } catch (error) {
+    if (version !== snapshotVersion) return;
     list.replaceChildren();
     empty.hidden = false;
     empty.textContent = "Start XDM to view your downloads.";
@@ -113,4 +122,14 @@ showAllInput.addEventListener("change", async () => {
 });
 document.querySelector("#refresh").addEventListener("click", refresh);
 loadSettings().then(refresh);
-setInterval(refresh, 3000);
+chrome.runtime.onMessage.addListener(message => {
+  if (message?.type === "backend-downloads") {
+    snapshotVersion++;
+    allDownloads = message.downloads;
+    const downloads = filterDownloads(allDownloads, showAllDownloads, sessionStartedAt);
+    render(downloads);
+    setConnection(true, String(downloads.length) + " " + (showAllDownloads ? "all" : "session"));
+  } else if (message?.type === "backend-offline") {
+    setConnection(false, "XDM is offline");
+  }
+});

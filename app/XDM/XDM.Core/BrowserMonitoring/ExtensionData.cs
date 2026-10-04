@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -20,5 +20,6 @@ namespace XDM.Core.BrowserMonitoring
         public long? FileSize { get; set; }
         public string MimeType { get; set; }
         public string Vid { get; set; }
+        public string CaptureId { get; set; }
     }
 }

@@ -14,6 +14,7 @@ namespace XDM.Core
         public DateTime CreationTime { get; set; }
         public string TabUrl { get; set; }
         public string TabId { get; set; }
+        public bool YouTubeExtraction { get; set; }
 
         public string DescriptionText
         {
