@@ -21,7 +21,7 @@ export default class App {
         this.onDownloadCreatedCallback = this.onDownloadCreated.bind(this);
         this.onDeterminingFilenameCallback = this.onDeterminingFilename.bind(this);
         this.onTabUpdateCallback = this.onTabUpdate.bind(this);
-        this.activeTabId = -1;
+        this.activeTabQueryGeneration = 0;
         this.mediaFilters = normalizeFilters(DEFAULT_FILTERS);
         this.connector = new Connector(this.onMessage.bind(this), this.onDisconnect.bind(this));
         this.stateStore.subscribe(snapshot => this.onStateChanged(snapshot));
@@ -31,6 +31,7 @@ export default class App {
         this.logger.log("starting...");
         this.starAppConnector();
         this.register();
+        this.refreshActiveTab();
         this.loadMediaFilters();
         this.logger.log("started.");
     }
@@ -169,6 +170,7 @@ export default class App {
         this.requestWatcher.register();
         this.attachContextMenu();
         chrome.tabs.onActivated.addListener(this.onTabActivated.bind(this));
+        chrome.windows.onFocusChanged.addListener(() => this.refreshActiveTab());
     }
 
     isSupportedProtocol(url) {
@@ -204,20 +206,6 @@ export default class App {
                 vc = len + "";
             }
         }
-        // if (this.videoList && this.videoList.length > 0) {
-        //     let len = this.videoList.filter(vid => {
-        //         if (!vid.tabId) {
-        //             return true;
-        //         }
-        //         if (vid.tabId == '-1') {
-        //             return true;
-        //         }
-        //         return (vid.tabId == this.activeTabId);
-        //     }).length;
-        //     if (len > 0) {
-        //         vc = len + "";
-        //     }
-        // }
         chrome.action.setBadgeText({ text: vc });
     }
 
@@ -337,6 +325,7 @@ export default class App {
 
     onPopupConnected(port) {
         if (port.name !== 'xdm-popup-state') return;
+        this.refreshActiveTab();
         this.popupPorts.add(port);
         port.postMessage(this.stateStore.snapshot());
         this.connector.setInteractive(true);
@@ -398,9 +387,16 @@ export default class App {
         chrome.contextMenus.onClicked.addListener(this.onMenuClicked.bind(this));
     }
 
-    onTabActivated(activeInfo) {
-        this.activeTabId = activeInfo.tabId + "";
-        this.logger.log("Active tab: " + this.activeTabId);
-        this.updateActionIcon();
+    refreshActiveTab() {
+        const generation = ++this.activeTabQueryGeneration;
+        chrome.tabs.query({ active: true, lastFocusedWindow: true }, tabs => {
+            if (generation !== this.activeTabQueryGeneration) return;
+            this.stateStore.setActiveTab(chrome.runtime.lastError ? null : tabs[0]?.id);
+        });
+    }
+
+    onTabActivated() {
+        // A background window can also activate a tab; resolve the focused window.
+        this.refreshActiveTab();
     }
 }

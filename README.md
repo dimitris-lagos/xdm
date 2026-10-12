@@ -1,8 +1,8 @@
-# XDM 9.0.2 Beta for Windows
+# XDM 9.0.3 Beta for Windows
 
 Download files, capture streaming media, and manage your downloads directly from the browser. This Windows beta brings two complementary extensions, live download updates, better YouTube format discovery, and a rebuilt installer for both 32-bit and 64-bit Windows.
 
-**[Download XDM-Setup.exe](https://github.com/dimitris-lagos/xdm/releases/download/v9.0.2/XDM-Setup.exe)** · **[Release notes](https://github.com/dimitris-lagos/xdm/releases/tag/v9.0.2)** · **[Upstream XDM](https://github.com/subhra74/xdm)**
+**[Download XDM-Setup.exe](https://github.com/dimitris-lagos/xdm/releases/download/v9.0.3/XDM-Setup.exe)** · **[Release notes](https://github.com/dimitris-lagos/xdm/releases/tag/v9.0.3)** · **[Upstream XDM](https://github.com/subhra74/xdm)**
 
 ## What's new
 
@@ -28,6 +28,8 @@ The **Integration Module** captures browser downloads and lists detected video a
 - Control regular browser monitoring and automatic **yt-dlp extraction** independently.
 - Turn yt-dlp extraction off to stop automatic YouTube scans and cancel running extractors while ordinary browser downloads remain available.
 - Repeated browser filename callbacks hand a download to XDM only once.
+
+The Integration Module shows media, available filters, and the toolbar count for the active tab only. Switching tabs or focused browser windows refreshes the list immediately, including after the extension worker restarts.
 
 YouTube discovery follows tab navigation and uses structured format metadata. Codec and quality choices come from the formats XDM detects, rather than guesses based on a filename.
 

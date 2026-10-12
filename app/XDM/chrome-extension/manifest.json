@@ -4,7 +4,7 @@
         "default_popup": "popup.html"
     },
     "manifest_version": 3,
-    "version": "3.6.4",
+    "version": "3.6.5",
     "description": "Download with Xtreme Download Manager.",
     "host_permissions": [
         "*://*/*"

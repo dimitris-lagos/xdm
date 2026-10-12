@@ -23,6 +23,7 @@ export class ExtensionStateStore {
         this.appEnabled = false;
         this.userDisabled = false;
         this.ytdlpEnabled = true;
+        this.activeTabId = null;
         this.videoList = [];
         this.videoListSignature = mediaSignature(this.videoList);
         this.mediaRevision = 0;
@@ -52,6 +53,16 @@ export class ExtensionStateStore {
     setYtdlpEnabled(enabled) {
         if (this.ytdlpEnabled === enabled) return false;
         this.ytdlpEnabled = enabled;
+        this.emit();
+        return true;
+    }
+
+    setActiveTab(tabId) {
+        const id = tabId != null && Number.isInteger(Number(tabId)) && Number(tabId) >= 0
+            ? String(tabId) : null;
+        if (this.activeTabId === id) return false;
+        this.activeTabId = id;
+        this.mediaRevision += 1;
         this.emit();
         return true;
     }
@@ -88,7 +99,9 @@ export class ExtensionStateStore {
             userEnabled: !this.userDisabled,
             ytdlpEnabled: this.ytdlpEnabled,
             monitoringEnabled: connected && this.appEnabled && !this.userDisabled,
-            list: this.videoList
+            activeTabId: this.activeTabId,
+            list: this.activeTabId === null ? [] : this.videoList.filter(item =>
+                item.tabId != null && String(item.tabId) === this.activeTabId)
         };
     }
 
